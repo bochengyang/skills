@@ -57,7 +57,17 @@
         "codeSnapshot": { "type": "string", "description": "Text of the commented line(s) at the time of commenting, so the agent can detect outdated threads after the code moved." },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" },
-        "messages": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/message" } }
+        "messages": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/message" } },
+        "resolved": {
+          "type": "object",
+          "description": "Set when the reviewer resolves the conversation in the viewer. Independent of the agent's resolutions.json: a thread is open only when neither side has closed it.",
+          "required": ["by", "at"],
+          "additionalProperties": false,
+          "properties": {
+            "by": { "type": "string", "minLength": 1 },
+            "at": { "type": "string", "format": "date-time" }
+          }
+        }
       }
     }
   }

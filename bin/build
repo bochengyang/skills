@@ -1,0 +1,35 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/.."
+for input in src/index.html src/style.css src/parser.js src/split.js src/comments-core.js src/viewer-state.js src/app.js vendor/github.min.css vendor/github-dark.min.css vendor/diff.min.js vendor/highlight.min.js; do
+  [ -f "$input" ] || { echo "Missing input: $input" >&2; exit 1; }
+done
+mkdir -p dist
+scope_css() {
+  tr '\n' ' ' < "$1" | sed 's@/\*.*\*/@@g' | sed 's/}/}\
+/g' | sed 's/\([^{}]*\){/.hb-code \1{/g; s/,/, .hb-code /g'
+}
+{
+while IFS= read -r line; do
+  case "$line" in
+    *'@@STYLE@@'*)
+      echo '<style>'
+      scope_css vendor/github.min.css
+      echo '@media (prefers-color-scheme: dark) {'
+      scope_css vendor/github-dark.min.css
+      echo '}'
+      cat src/style.css
+      echo '</style>' ;;
+    *'@@VENDOR@@'*)
+      echo '<script>'
+      cat vendor/diff.min.js vendor/highlight.min.js
+      echo '</script>' ;;
+    *'@@MODULES@@'*)
+      echo '<script>'
+      sed 's/^export //' src/parser.js src/split.js src/comments-core.js src/viewer-state.js
+      echo '</script>' ;;
+    *'@@APP@@'*) echo '<script>'; cat src/app.js; echo '</script>' ;;
+    *) printf '%s\n' "$line" ;;
+  esac
+done < src/index.html
+} > dist/viewer.html
