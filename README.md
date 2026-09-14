@@ -111,8 +111,9 @@ server refuses, they stay in the browser and **Copy prompt** hands them to your 
 
 The contract is the three JSON files. Any agent that can read and write files can take part:
 
-1. Read `comments.json`; `openThreads()` semantics: a thread is open until a resolution with
-   status `resolved` or `wontfix` exists for it.
+1. Read `comments.json`. A thread is open until the reviewer resolves it in the viewer
+   (`resolved` on the thread) or a resolution with status `resolved` or `wontfix` exists
+   for it in `resolutions.json`.
 2. Change the code.
 3. Append to `resolutions.json` (`resolved`, `wontfix` with a note, or `needs-info` to ask back).
 4. Re-run `hunkboard-publish` and push both files.
