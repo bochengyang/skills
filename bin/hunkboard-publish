@@ -1,0 +1,114 @@
+#!/bin/sh
+set -eu
+# A stale monitor makes Git skip content checks and silently drop modified files.
+git() { command git -c core.fsmonitor=false -c core.untrackedCache=false "$@"; }
+out=
+repo=
+branch=
+base=HEAD
+untracked=yes
+max=512000
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --out|--repo|--branch|--base|--max-file-bytes)
+      [ "$#" -ge 2 ] || { echo "Missing value for $1" >&2; exit 1; }
+      case "$1" in
+        --out) out=$2 ;; --repo) repo=$2 ;; --branch) branch=$2 ;;
+        --base) base=$2 ;; --max-file-bytes) max=$2 ;;
+      esac
+      shift 2 ;;
+    --no-untracked) untracked=no; shift ;;
+    *) echo "Unknown argument: $1" >&2; exit 1 ;;
+  esac
+done
+[ -n "$out" ] || { echo '--out is required' >&2; exit 1; }
+case "$max" in ''|*[!0-9]*) echo '--max-file-bytes requires a nonnegative integer' >&2; exit 1 ;; esac
+root=$(git rev-parse --show-toplevel) || exit 1
+base_commit=$(git rev-parse --verify "$base^{commit}")
+[ -n "$repo" ] || repo=${root##*/}
+[ -n "$branch" ] || branch=$(git rev-parse --abbrev-ref HEAD)
+untracked_paths=$(cd "$root" && git ls-files --others --exclude-standard -z | jq -Rs .)
+mkdir -p "$out"
+out=$(cd "$out" && pwd -L)
+cd "$root"
+work=$(mktemp -d "$out/.hunkboard-publish.XXXXXX")
+cleanup() { rm -rf "$work"; }
+trap cleanup 0
+trap 'exit 1' HUP INT TERM
+# Isolate intent-to-add entries so the real index stays byte-for-byte intact.
+# Preserve index timestamps so Git verifies content when file mtimes are not older
+# than the index, catching same-size edits in the racily clean window.
+index=$(git rev-parse --git-path index)
+if [ -f "$index" ]; then cp -p "$index" "$work/index"; fi
+GIT_INDEX_FILE=$work/index
+export GIT_INDEX_FILE
+if [ "$untracked" = yes ]; then
+  printf '%s\n' "$untracked_paths" | jq -jr . > "$work/untracked"
+  if [ -s "$work/untracked" ]; then
+    git --literal-pathspecs add -N --pathspec-from-file="$work/untracked" --pathspec-file-nul
+  fi
+fi
+git diff --no-ext-diff --no-textconv --no-color -M "$base_commit" -- > "$work/raw"
+git diff --no-ext-diff --no-textconv --numstat -z -M "$base_commit" -- > "$work/stats"
+# NUL records retain tabs and newlines in names; rename records carry two paths.
+jq -Rrs '
+  split("\u0000") | .[:-1] |
+  reduce .[] as $part ({rows: [], pending: null};
+    if .pending != null then
+      if .pending.old == null then .pending.old = $part
+      else .rows += [[.pending.old, $part, .pending.binary]] | .pending = null end
+    else
+      ($part | capture("^(?<adds>[^\t]*)\t(?<dels>[^\t]*)\t(?<path>[\\s\\S]*)$")) as $stat |
+      if $stat.path == "" then .pending = {old: null, binary: ($stat.adds == "-")}
+      else .rows += [[$stat.path, $stat.path, ($stat.adds == "-")]] end
+    end) | .rows[] | @sh
+' "$work/stats" > "$work/rows"
+jq -n '{}' > "$work/files"
+while IFS= read -r row; do
+  eval "set -- $row"
+  old_path=$1
+  new_path=$2
+  binary=$3
+  if [ "$binary" = true ]; then
+    jq -n '{old:null,new:null,binary:true}' > "$work/entry"
+  else
+    old_exists=false
+    new_exists=false
+    : > "$work/old"
+    : > "$work/new"
+    if git cat-file -e "$base_commit:$old_path" 2>/dev/null; then
+      git show "$base_commit:$old_path" > "$work/old"
+      old_exists=true
+    fi
+    if [ -L "$new_path" ]; then
+      # Git stores a symlink target without a terminating newline.
+      target=$(readlink "$new_path"; printf '.')
+      target=${target%.}
+      target=${target%'
+'}
+      printf '%s' "$target" > "$work/new"
+      new_exists=true
+    elif [ -f "$new_path" ]; then
+      cat "$new_path" > "$work/new"
+      new_exists=true
+    fi
+    old_size=$(wc -c < "$work/old")
+    new_size=$(wc -c < "$work/new")
+    if [ "$old_size" -gt "$max" ] || [ "$new_size" -gt "$max" ]; then
+      jq -n '{old:null,new:null,truncated:true}' > "$work/entry"
+    else
+      jq -n --rawfile old "$work/old" --rawfile new "$work/new" \
+        --argjson oldExists "$old_exists" --argjson newExists "$new_exists" \
+        '{old: (if $oldExists then $old else null end), new: (if $newExists then $new else null end)}' > "$work/entry"
+    fi
+  fi
+  jq --arg path "$new_path" --slurpfile entry "$work/entry" '.[$path] = $entry[0]' "$work/files" > "$work/next"
+  mv "$work/next" "$work/files"
+done < "$work/rows"
+jq -n --arg repo "$repo" --arg branch "$branch" --arg base "$base" \
+  --arg baseCommit "$base_commit" --rawfile rawDiff "$work/raw" --slurpfile files "$work/files" \
+  '{version: 1, repo: $repo, branch: $branch, base: $base, baseCommit: $baseCommit,
+    generatedAt: (now | strftime("%Y-%m-%dT%H:%M:%SZ")), generator: "hunkboard-publish/0.1.0",
+    rawDiff: $rawDiff, files: $files[0]}' > "$work/diff.json"
+mv "$work/diff.json" "$out/diff.json"
+printf '%s\n' "$out/diff.json"

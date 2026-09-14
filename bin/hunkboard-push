@@ -1,0 +1,49 @@
+#!/bin/sh
+set -eu
+from= remote=${HUNKBOARD_REMOTE:-} root=${HUNKBOARD_ROOT:-} repo= branch= viewer= dry=false
+fail() { echo "$*" >&2; exit 1; }
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --dry-run) dry=true; shift ;;
+    --from|--remote|--root|--repo|--branch|--viewer)
+      flag=$1; [ "$#" -ge 2 ] || fail "Missing value for $flag"
+      case "$flag" in
+        --from) from=$2;; --remote) remote=$2;; --root) root=$2;; --repo) repo=$2;; --branch) branch=$2;; --viewer) viewer=$2;;
+      esac
+      shift 2 ;;
+    *) fail "Unknown argument: $1" ;;
+  esac
+done
+[ -n "$from" ] || fail 'Missing --from'
+[ -n "$remote" ] || fail 'Missing remote'
+[ -n "$root" ] || fail 'Missing root'
+[ -f "$from/diff.json" ] || fail 'Missing diff.json'
+for tool in jq ssh scp; do command -v "$tool" >/dev/null 2>&1 || fail "Missing $tool"; done
+[ -n "$repo" ] || repo=$(jq -er '.repo' "$from/diff.json")
+[ -n "$branch" ] || branch=$(jq -er '.branch' "$from/diff.json")
+[ -z "$viewer" ] || [ -f "$viewer" ] || fail 'Missing viewer'
+case "$repo" in ''|.|..|*/*) fail 'Invalid repo';; esac
+branch=$(printf '%s' "$branch" | tr '/' '-')
+case "$branch" in ''|.|..) fail 'Invalid branch';; esac
+ns=${root%/}/$repo/$branch
+quote() {
+  case "$1" in
+    ''|*[!A-Za-z0-9/._-]*) printf "'"; printf '%s' "$1" | sed "s/'/'\\\\''/g"; printf "'" ;;
+    *) printf '%s' "$1" ;;
+  esac
+}
+if "$dry"; then
+  printf 'ssh %s mkdir -p %s\n' "$(quote "$remote")" "$(quote "$ns")"
+else
+  ssh "$remote" "mkdir -p $(quote "$ns")"
+fi
+upload() {
+  if "$dry"; then
+    printf 'scp -q %s %s:%s\n' "$(quote "$1")" "$(quote "$remote")" "$(quote "$2")"
+  else
+    scp -q "$1" "$remote:$(quote "$2")"
+  fi
+}
+upload "$from/diff.json" "$ns/diff.json"
+[ ! -f "$from/resolutions.json" ] || upload "$from/resolutions.json" "$ns/resolutions.json"
+[ -z "$viewer" ] || upload "$viewer" "${root%/}/viewer.html"
