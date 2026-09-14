@@ -212,3 +212,27 @@ export function selectionFromLines(entries) {
   }
   return selection;
 }
+
+export function reviewProgress(files, isViewed) {
+  const list = files ?? [];
+  const total = list.length;
+  const viewed = list.filter(isViewed).length;
+  return {
+    viewed,
+    total,
+    ratio: total ? viewed / total : 0,
+    complete: total > 0 && viewed === total
+  };
+}
+
+export function modeChangeLabel(file) {
+  const { oldMode, newMode } = file;
+  if (!oldMode || !newMode || oldMode === newMode) return null;
+  const labels = {
+    '100644:100755': 'Made executable',
+    '100755:100644': 'No longer executable',
+    '100644:120000': 'Became a symlink',
+    '120000:100644': 'No longer a symlink'
+  };
+  return labels[`${oldMode}:${newMode}`] ?? `Mode ${oldMode} → ${newMode}`;
+}

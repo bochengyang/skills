@@ -69,12 +69,11 @@
     state.selection = null;
     if (state.diff) render();
   });
-  const viewMode = () => state.focus
-    ? (window.innerWidth < 768 ? 'inline' : state.focusMode)
-    : state.mode;
+  const viewMode = () => window.innerWidth < 768
+    ? 'inline' : (state.focus ? state.focusMode : state.mode);
   const narrowScreen = window.matchMedia('(max-width: 767px)');
   narrowScreen.addEventListener('change', () => {
-    if (state.diff && state.focus) render();
+    if (state.diff) render();
   });
   function syncSidebar() {
     const sidebar = root.querySelector('.sidebar');
@@ -109,7 +108,10 @@
     savedTimer;
   const decorated = () => applyResolutions(state.threads, state.resolutions);
   function setNotice(text) {
-    notice.textContent = text;
+    notice.textContent = text === localNotice ? 'Browser only' : text;
+    notice.title = text;
+    notice.setAttribute('aria-label', text);
+    notice.classList.toggle('local-only', text === localNotice);
   }
   async function persist() {
     revision++;
@@ -235,6 +237,7 @@
     const closed = ['resolved', 'wontfix'].includes(threadState(thread));
     const card = el('div', 'thread');
     card.dataset.threadId = thread.id;
+    card.classList.toggle('closed', closed);
     const content = el('div', 'thread-content');
     const statuses = { resolved: 'Resolved', wontfix: "Won't fix", 'needs-info': 'Needs info' };
     if (closed) {
@@ -690,27 +693,27 @@
     return read(viewedKey(dataBase, file.path, fileContentHash(file))) === '1';
   }
   function viewedControl(file) {
-    const label = el('label', 'viewed');
-    const input = el('input');
-    input.type = 'checkbox';
-    input.checked = isReviewed(file);
-    input.addEventListener('change', () => {
-      write(viewedKey(dataBase, file.path, fileContentHash(file)), input.checked ? '1' : '0');
-      state.collapsed.set(file.path, input.checked);
+    const viewed = isReviewed(file);
+    const tick = button('✓', () => {
+      write(viewedKey(dataBase, file.path, fileContentHash(file)), viewed ? '0' : '1');
+      state.collapsed.set(file.path, !viewed);
       render();
-    });
-    label.append(input, document.createTextNode('Viewed'));
-    return label;
+    }, 'viewed');
+    tick.setAttribute('aria-pressed', String(viewed));
+    tick.setAttribute('aria-label', `Mark ${file.path} as ${viewed ? 'unviewed' : 'viewed'}`);
+    return tick;
   }
+
   async function copyPrompt(event) {
     const target = event.currentTarget;
+    const label = target.textContent;
     const text = formatPrompt(openThreads(decorated()));
     try {
       if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
       await navigator.clipboard.writeText(text);
       target.textContent = 'Copied';
       setTimeout(() => {
-        copy.textContent = 'Copy prompt';
+        target.textContent = label;
       }, 2000);
     } catch {
       const area = el('textarea', 'copy-fallback');
@@ -723,7 +726,10 @@
       area.select();
     }
   }
-  let toolbar, copy;
+  let toolbar;
+  const progressRule = el('div', 'review-progress');
+  const progressFill = el('div', 'review-progress-fill');
+  progressRule.append(progressFill);
   function statCell(node) {
     const cell = el('span', 'tree-stat');
     const stat = formatStat(node);
@@ -739,7 +745,7 @@
   function renderFileTree(nav) {
     const tree = buildFileTree(state.files);
     const indent = (row, depth) => {
-      row.style.setProperty('--indent', `${Math.min(depth, 6) * 14}px`);
+      row.style.setProperty('--indent', `${Math.min(depth, 6) * 12}px`);
     };
     const rootRow = button('', () => {
       location.hash = '';
@@ -802,30 +808,36 @@
   }
   function render() {
     dismissTextSelection();
-    root.replaceChildren();
+    for (const child of [...root.children]) {
+      if (child !== progressRule) child.remove();
+    }
     const all = decorated(),
       threads = state.onlyOpen ? openThreads(all) : all;
     toolbar = el('header', 'toolbar');
-    toolbar.append(
-      el('strong', 'brand', 'hunkboard'),
-      el(
-        'span',
-        'metadata',
-        `${state.diff.repo} · ${state.diff.branch} · ${(
-          state.diff.baseCommit || state.diff.base
-        ).slice(
-          0,
-          8
-        )} · ${formatRelativeTime(state.diff.generatedAt)}`
-      )
-    );
-    const sum = totals(state.files);
-    toolbar.append(
-      el('span', 'totals', `${sum.files} files`),
-      el('span', 'add-count', `+${sum.additions}`),
-      el('span', 'del-count', `−${sum.deletions}`),
-      el('span', 'open-count', `${openThreads(all).length} open`)
-    );
+    const identity = el('div', 'identity');
+    const metadata = el('div', 'metadata');
+    metadata.append(el('strong', 'repo', state.diff.repo));
+    metadata.append(document.createTextNode(` · ${state.diff.branch}`));
+    const base = (state.diff.baseCommit || state.diff.base).slice(0, 8);
+    identity.append(metadata, el('div', 'revision',
+      `${base} · ${formatRelativeTime(state.diff.generatedAt)}`));
+    toolbar.append(identity);
+    const progress = reviewProgress(state.files, isReviewed);
+    const open = openThreads(all).length;
+    const progressLabel = progress.complete
+      ? button(open ? `${open} open · Copy prompt` : 'All resolved · Copy prompt', copyPrompt)
+      : el('span', '', `${progress.viewed} of ${progress.total} reviewed`);
+    progressLabel.className = 'progress-label';
+    if (progress.complete && open) progressLabel.classList.add('open-count');
+    toolbar.append(progressLabel);
+    progressRule.setAttribute('role', 'progressbar');
+    progressRule.setAttribute('aria-label', 'Files reviewed');
+    progressRule.setAttribute('aria-valuemin', '0');
+    progressRule.setAttribute('aria-valuemax', String(progress.total));
+    progressRule.setAttribute('aria-valuenow', String(progress.viewed));
+    progressFill.style.width = `${progress.ratio * 100}%`;
+    const actions = el('div', 'actions');
+    toolbar.append(actions);
     const modes = el('div', 'view-modes');
     modes.setAttribute('role', 'group');
     modes.setAttribute('aria-label', 'Diff layout');
@@ -839,9 +851,26 @@
       b.setAttribute('aria-pressed', String(viewMode() === mode));
       modes.append(b);
     }
-    toolbar.append(modes);
-    copy = button('Copy prompt', copyPrompt);
-    toolbar.append(copy);
+    actions.append(modes);
+    const overflow = el('div', 'overflow');
+    const more = button('More', () => {
+      const open = overflow.classList.toggle('is-open');
+      more.setAttribute('aria-expanded', String(open));
+    }, 'more');
+    more.setAttribute('aria-expanded', 'false');
+    more.setAttribute('aria-controls', 'review-actions');
+    more.setAttribute('aria-label', 'More review actions');
+    const menu = el('div', 'action-menu');
+    menu.id = 'review-actions';
+    overflow.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      overflow.classList.remove('is-open');
+      more.setAttribute('aria-expanded', 'false');
+      more.focus();
+    });
+    menu.append(button('Copy prompt', copyPrompt));
+    overflow.append(more, menu);
+    actions.append(overflow);
     const filter = el('label', 'open-filter');
     const checkbox = el('input');
     checkbox.type = 'checkbox';
@@ -851,11 +880,14 @@
       render();
     });
     filter.append(checkbox, document.createTextNode('Open only'));
-    toolbar.append(filter);
-    const oldNotice = notice?.textContent;
-    notice = el('div', 'save-notice', oldNotice || (local.length ? localNotice : ''));
+    menu.append(filter);
+    const oldNotice = notice?.title;
+    notice = el('span', 'save-notice');
     notice.setAttribute('role', 'status');
-    root.append(toolbar, notice);
+    setNotice(oldNotice || (local.length ? localNotice : ''));
+    identity.append(notice);
+    if (!progressRule.isConnected) root.append(progressRule);
+    root.insertBefore(toolbar, progressRule);
     const layout = el('div', 'layout'),
       sidebar = el('aside', 'sidebar');
     sidebar.id = 'hb-sidebar';
@@ -898,29 +930,26 @@
       });
       toggle.setAttribute('aria-label', `Toggle ${file.path}`);
       toggle.setAttribute('aria-expanded', String(!collapsed));
+      const path = el('div', 'file-path');
+      path.append(el('strong', '',
+        file.status === 'renamed' ? `${file.oldPath} → ${file.newPath}` : file.path));
+      const content = state.diff.files?.[file.path];
+      const notes = [];
+      if (file.isBinary || content?.binary) notes.push('Binary file');
+      if (content?.truncated) notes.push('Content omitted: size limit exceeded');
+      const modeLabel = modeChangeLabel(file);
+      if (modeLabel) notes.push(modeLabel);
+      if (file.similarity !== undefined) notes.push(`${file.similarity}% similar`);
+      if (notes.length) path.append(el('div', 'file-meta', notes.join(' · ')));
       header.append(
         toggle,
-        el(
-          'strong',
-          'file-path',
-          file.status === 'renamed' ? `${file.oldPath} → ${file.newPath}` : file.path
-        ),
+        path,
         el('span', 'add-count', `+${file.additions}`),
         el('span', 'del-count', `−${file.deletions}`),
         viewedControl(file)
       );
       section.append(header);
       main.append(section);
-      if (file.similarity !== undefined)
-        header.append(el('small', '', `${file.similarity}% similar`));
-      if (file.oldMode || file.newMode)
-        header.append(
-          el('small', '', `Mode ${file.oldMode || '—'} → ${file.newMode || '—'}`)
-        );
-      const content = state.diff.files?.[file.path];
-      if (file.isBinary || content?.binary) section.append(el('p', 'file-notice', 'Binary file'));
-      if (content?.truncated)
-        section.append(el('p', 'file-notice', 'File content omitted: size limit exceeded'));
       const whole = state.focus ? fullFileLines(file, content) : null;
       if (state.focus && whole === null) {
         section.append(el('p', 'file-notice', 'Whole-file view is not available for this file'));
