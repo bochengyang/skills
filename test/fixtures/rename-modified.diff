@@ -1,0 +1,16 @@
+diff --git a/src/big.txt b/src/renamed-big.txt
+similarity index 95%
+rename from src/big.txt
+rename to src/renamed-big.txt
+index 4c26eb4..1061944 100644
+--- a/src/big.txt
++++ b/src/renamed-big.txt
+@@ -12,7 +12,7 @@ renamed content line 11
+ renamed content line 12
+ renamed content line 13
+ renamed content line 14
+-renamed content line 15
++renamed content line 15 tweaked
+ renamed content line 16
+ renamed content line 17
+ renamed content line 18

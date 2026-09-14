@@ -1,0 +1,4 @@
+diff --git a/src/pure.txt b/src/pure-renamed.txt
+similarity index 100%
+rename from src/pure.txt
+rename to src/pure-renamed.txt

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hunkboard.dev/schema/diff.schema.json",
+  "title": "hunkboard diff.json",
+  "description": "One review round. Written only by the publisher (hunkboard-publish). Contains the raw unified diff plus full old/new contents of changed text files so the viewer can expand context, show whole files and recompute whitespace-insensitive diffs offline.",
+  "type": "object",
+  "required": ["version", "repo", "branch", "base", "generatedAt", "rawDiff", "files"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "repo": { "type": "string", "minLength": 1, "description": "Display name of the repository (namespace segment 1)." },
+    "branch": { "type": "string", "minLength": 1, "description": "Branch or ref name under review (namespace segment 2)." },
+    "base": { "type": "string", "minLength": 1, "description": "The revision the working tree was diffed against, e.g. HEAD or a commit hash." },
+    "baseCommit": { "type": "string", "pattern": "^[0-9a-f]{7,64}$", "description": "Resolved commit hash of base." },
+    "round": { "type": "integer", "minimum": 1, "description": "Monotonic round counter within this repo/branch namespace, if the publisher keeps history." },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "generator": { "type": "string", "description": "Tool and version that produced this file, e.g. hunkboard-publish/0.1.0." },
+    "rawDiff": { "type": "string", "description": "Verbatim output of git diff (unified format, rename detection on). May be empty when nothing changed." },
+    "files": {
+      "type": "object",
+      "description": "Full contents keyed by path as it appears in rawDiff (new path for renames). Only changed text files within the size limit are included.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["old", "new"],
+        "additionalProperties": false,
+        "properties": {
+          "old": { "type": ["string", "null"], "description": "Content at base. null when the file did not exist (added) or was omitted." },
+          "new": { "type": ["string", "null"], "description": "Content in the working tree. null when deleted or omitted." },
+          "truncated": { "type": "boolean", "default": false, "description": "true when contents were omitted because the file exceeded the publisher's size limit." },
+          "binary": { "type": "boolean", "default": false }
+        }
+      }
+    }
+  }
+}

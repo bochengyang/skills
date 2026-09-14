@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hunkboard.dev/schema/comments.schema.json",
+  "title": "hunkboard comments.json",
+  "description": "Review threads left by humans in the viewer. Written ONLY by the viewer (HTTP PUT). Agents read it and answer through resolutions.json; they never write this file.",
+  "type": "object",
+  "required": ["version", "updatedAt", "threads"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "threads": { "type": "array", "items": { "$ref": "#/$defs/thread" } }
+  },
+  "$defs": {
+    "position": {
+      "type": "object",
+      "required": ["side", "line"],
+      "additionalProperties": false,
+      "properties": {
+        "side": { "enum": ["old", "new"], "description": "old = the deleted/left side, new = the added/right side." },
+        "line": {
+          "oneOf": [
+            { "type": "integer", "minimum": 1 },
+            {
+              "type": "object",
+              "required": ["start", "end"],
+              "additionalProperties": false,
+              "properties": {
+                "start": { "type": "integer", "minimum": 1 },
+                "end": { "type": "integer", "minimum": 1 }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "message": {
+      "type": "object",
+      "required": ["id", "author", "body", "createdAt"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "author": { "type": "string", "minLength": 1 },
+        "body": { "type": "string", "minLength": 1 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "thread": {
+      "type": "object",
+      "required": ["id", "filePath", "position", "createdAt", "updatedAt", "messages"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "description": "Stable unique id (UUID recommended). Referenced by resolutions.json." },
+        "filePath": { "type": "string", "minLength": 1, "description": "Path as shown in the diff (new path for renames)." },
+        "position": { "$ref": "#/$defs/position" },
+        "codeSnapshot": { "type": "string", "description": "Text of the commented line(s) at the time of commenting, so the agent can detect outdated threads after the code moved." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "messages": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/message" } }
+      }
+    }
+  }
+}

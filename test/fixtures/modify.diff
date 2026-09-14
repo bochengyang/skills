@@ -1,0 +1,10 @@
+diff --git a/src/modify.txt b/src/modify.txt
+index 85c3040..2fc7511 100644
+--- a/src/modify.txt
++++ b/src/modify.txt
+@@ -1,3 +1,4 @@
+ alpha
+-beta
++beta modified
+ gamma
++delta added

@@ -1,0 +1,13 @@
+{
+  "name": "hunkboard",
+  "version": "0.1.0",
+  "description": "Static, agent-neutral PR-style diff review board. Publish a working tree as static files, review on any device, hand comments back to your coding agent.",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "build": "sh bin/build"
+  },
+  "engines": { "node": ">=20" }
+}

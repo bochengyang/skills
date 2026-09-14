@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.hunkboard.env
+*.local
+.DS_Store

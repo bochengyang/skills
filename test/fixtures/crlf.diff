@@ -1,0 +1,8 @@
+diff --git a/src/crlf.txt b/src/crlf.txt
+index 14d1286..106e19f 100644
+--- a/src/crlf.txt
++++ b/src/crlf.txt
+@@ -1,2 +1,2 @@
+ crlf line 1
+-crlf line 2
++crlf line 2 changed

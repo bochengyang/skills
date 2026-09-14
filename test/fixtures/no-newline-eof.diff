@@ -1,0 +1,9 @@
+diff --git a/src/noeol.txt b/src/noeol.txt
+index 2802503..ca72676 100644
+--- a/src/noeol.txt
++++ b/src/noeol.txt
+@@ -1 +1 @@
+-no newline at end
+\ No newline at end of file
++no newline at end, changed
+\ No newline at end of file

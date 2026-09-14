@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hunkboard.dev/schema/resolutions.schema.json",
+  "title": "hunkboard resolutions.json",
+  "description": "The agent's answers to threads in comments.json. Written ONLY by the agent (or a human acting as one) and published next to diff.json. The viewer merges it with comments.json for display; it never writes this file.",
+  "type": "object",
+  "required": ["version", "updatedAt", "resolutions"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "resolutions": { "type": "array", "items": { "$ref": "#/$defs/resolution" } }
+  },
+  "$defs": {
+    "resolution": {
+      "type": "object",
+      "required": ["threadId", "status", "by", "at"],
+      "additionalProperties": false,
+      "properties": {
+        "threadId": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["resolved", "wontfix", "needs-info"], "description": "resolved = change made; wontfix = declined with a reason; needs-info = agent asks the reviewer a question." },
+        "note": { "type": "string", "description": "Agent's reply shown under the thread." },
+        "by": { "type": "string", "minLength": 1, "description": "Agent identifier, e.g. codex/gpt-6-astra or claude-code." },
+        "at": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}
