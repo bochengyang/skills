@@ -1,6 +1,6 @@
 ---
 name: hunkboard-publish
-description: Publish the current git working tree (staged, unstaged and untracked changes vs HEAD) as a hunkboard review round and print the URL to open on a phone or tablet. Use when the user says "publish the board", "hunkboard", or wants to review the agent's changes outside the editor.
+description: Publish the current branch (commits since it left main, plus staged, unstaged and untracked changes) as a hunkboard review board and print the URL to open on a phone or tablet. Use when the user says "publish the board", "hunkboard", or wants to review the agent's changes outside the editor.
 ---
 
 # hunkboard-publish

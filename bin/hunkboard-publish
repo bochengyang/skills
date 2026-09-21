@@ -6,6 +6,7 @@ out=
 repo=
 branch=
 base=HEAD
+explicit_base=no
 untracked=yes
 max=512000
 while [ "$#" -gt 0 ]; do
@@ -14,7 +15,7 @@ while [ "$#" -gt 0 ]; do
       [ "$#" -ge 2 ] || { echo "Missing value for $1" >&2; exit 1; }
       case "$1" in
         --out) out=$2 ;; --repo) repo=$2 ;; --branch) branch=$2 ;;
-        --base) base=$2 ;; --max-file-bytes) max=$2 ;;
+        --base) base=$2; explicit_base=yes ;; --max-file-bytes) max=$2 ;;
       esac
       shift 2 ;;
     --no-untracked) untracked=no; shift ;;
@@ -24,7 +25,29 @@ done
 [ -n "$out" ] || { echo '--out is required' >&2; exit 1; }
 case "$max" in ''|*[!0-9]*) echo '--max-file-bytes requires a nonnegative integer' >&2; exit 1 ;; esac
 root=$(git rev-parse --show-toplevel) || exit 1
+if [ "$explicit_base" = no ]; then
+  current_branch=$(git symbolic-ref --quiet --short HEAD) || current_branch=
+  default_branch=$(git symbolic-ref --quiet refs/remotes/origin/HEAD) || default_branch=
+  if [ -n "$default_branch" ] && git rev-parse --verify "$default_branch^{commit}" >/dev/null 2>&1; then
+    default_name=${default_branch#refs/remotes/origin/}
+  elif git rev-parse --verify refs/heads/main^{commit} >/dev/null 2>&1; then
+    default_branch=refs/heads/main
+    default_name=main
+  elif git rev-parse --verify refs/heads/master^{commit} >/dev/null 2>&1; then
+    default_branch=refs/heads/master
+    default_name=master
+  else
+    default_branch=
+    default_name=
+  fi
+  if [ -n "$current_branch" ] && [ -n "$default_branch" ] && [ "$current_branch" != "$default_name" ]; then
+    base=$(git merge-base "$default_branch" HEAD)
+  fi
+fi
 base_commit=$(git rev-parse --verify "$base^{commit}")
+if [ "$explicit_base" = no ] && [ "$base" != HEAD ]; then
+  base="merge-base($default_name)"
+fi
 [ -n "$repo" ] || repo=${root##*/}
 [ -n "$branch" ] || branch=$(git rev-parse --abbrev-ref HEAD)
 untracked_paths=$(cd "$root" && git ls-files --others --exclude-standard -z | jq -Rs .)

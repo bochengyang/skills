@@ -43,7 +43,7 @@ Schemas live in [`schema/`](schema/).
 ## Quick start
 
 ```sh
-# 1. publish the current working tree (uncommitted + untracked changes vs HEAD)
+# 1. publish the branch: commits since main, plus uncommitted and untracked changes
 bin/hunkboard-publish --out /tmp/board/myrepo/feat-x
 # 2. deploy the viewer, then the namespace data, to a static server
 scp dist/viewer.html server:/srv/hunkboard/
@@ -76,7 +76,7 @@ bin/hunkboard-publish --out /tmp/board/demo/main
 | `--out DIR` | required | directory that receives `diff.json` (written atomically) |
 | `--repo NAME` | basename of the git toplevel | namespace segment 1 |
 | `--branch NAME` | current branch | namespace segment 2 (`/` becomes `-` when pushed) |
-| `--base REV` | `HEAD` | revision to diff against |
+| `--base REV` | where the branch left `main`/`master` (`HEAD` on the default branch) | revision to diff against — like a pull request, so commits and amends on the branch do not move the diff or the threads anchored to it |
 | `--no-untracked` | off | leave untracked files out (by default they are included via a temporary index, honouring `.gitignore`) |
 | `--max-file-bytes N` | `512000` | files larger than this keep their hunks but not their full contents |
 
