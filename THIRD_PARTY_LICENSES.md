@@ -7,3 +7,16 @@ preserved in the header comments of the files under `vendor/`.
 |---|---|---|---|
 | jsdiff (`vendor/diff.min.js`) | 7.0.0 | BSD-3-Clause | https://github.com/kpdecker/jsdiff |
 | highlight.js (`vendor/highlight.min.js`, `vendor/github*.css`) | 11.11.1 | BSD-3-Clause | https://github.com/highlightjs/highlight.js |
+
+## Mona Sans VF
+
+- Loaded from: https://cdn.jsdelivr.net/gh/github/mona-sans@v2.0.27.
+- License: SIL Open Font License 1.1.
+- Source: https://github.com/github/mona-sans.
+
+## Monaspace Neon
+
+- Loaded from the pinned CDN: https://cdn.jsdelivr.net/gh/githubnext/monaspace@v1.400.
+- License: SIL Open Font License 1.1.
+- Source: https://github.com/githubnext/monaspace.
+- Not redistributed by this repository.

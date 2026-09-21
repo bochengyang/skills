@@ -45,13 +45,17 @@ Schemas live in [`schema/`](schema/).
 ```sh
 # 1. publish the current working tree (uncommitted + untracked changes vs HEAD)
 bin/hunkboard-publish --out /tmp/board/myrepo/feat-x
-# 2. copy the viewer and the data next to each other on any static server
-scp dist/viewer.html  server:/srv/hunkboard/
+# 2. deploy the viewer, then the namespace data, to a static server
+scp dist/viewer.html server:/srv/hunkboard/
 scp /tmp/board/myrepo/feat-x/diff.json server:/srv/hunkboard/myrepo/feat-x/
 # 3. open https://server/myrepo/feat-x/ on your phone
 #    (nginx maps that URL to /viewer.html; on a plain file server use
 #     https://server/viewer.html?ns=myrepo/feat-x instead)
 ```
+
+A deploy copies one file, `viewer.html`. The interface face, Mona Sans VF, and code face,
+Monaspace Neon, both load from pinned jsDelivr CDNs: `github/mona-sans@v2.0.27` and
+`githubnext/monaspace@v1.400`. The viewer falls back to system fonts when they are unreachable. `hunkboard-push --viewer FILE` uploads just that viewer file.
 
 Try it locally without a server:
 

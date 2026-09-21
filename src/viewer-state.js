@@ -1,3 +1,8 @@
+export function commentColumns(layout, side) {
+  if (layout === 'split') return { start: side === 'old' ? 1 : 4, span: 3 };
+  return { start: 1, span: 4 };
+}
+
 export function resolveDataBase(location) {
   const directory = new URL('.', location.href);
   const ns = new URLSearchParams(location.search).get('ns');
@@ -235,4 +240,18 @@ export function modeChangeLabel(file) {
     '120000:100644': 'No longer a symlink'
   };
   return labels[`${oldMode}:${newMode}`] ?? `Mode ${oldMode} → ${newMode}`;
+}
+
+export function diffstatSquares(additions, deletions) {
+  const total = additions + deletions;
+  const filled = Math.min(5, total);
+  const rounded = total ? Math.round(filled * additions / total) : 0;
+  const green = additions && deletions ? Math.max(1, Math.min(filled - 1, rounded)) : rounded;
+  return Array.from({ length: 5 }, (_, index) =>
+    index < green ? 'add' : index < filled ? 'del' : 'neutral');
+}
+
+export function matchesFileFilter(path, query, onlyUnresolved, threads) {
+  return path.toLowerCase().includes(query.toLowerCase()) &&
+    (!onlyUnresolved || threads.some((thread) => thread.filePath === path));
 }

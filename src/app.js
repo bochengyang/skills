@@ -51,6 +51,8 @@
     focusMode: window.innerWidth < 768 ? 'inline' : 'split',
     mode: read('hunkboard:view') || (window.innerWidth < 768 ? 'inline' : 'split'),
     onlyOpen: false,
+    fileFilter: '',
+    onlyUnresolved: false,
     collapsed: new Map(),
     expanded: new Set(),
     treeClosed: new Set(),
@@ -98,7 +100,32 @@
       const tree = el('div');
       tree.id = 'hb-tree';
       renderFileTree(tree);
-      sidebar.append(tree);
+      const controls = el('div', 'file-filters');
+      const search = el('label', 'file-search');
+      const input = el('input');
+      input.placeholder = 'Filter files…';
+      input.setAttribute('aria-label', 'Filter files');
+      input.value = state.fileFilter;
+      const refresh = () => {
+        tree.replaceChildren();
+        renderFileTree(tree);
+      };
+      input.addEventListener('input', () => {
+        state.fileFilter = input.value;
+        refresh();
+      });
+      search.append(treeGlyph('search'), input);
+      const funnel = button('', () => {
+        state.onlyUnresolved = !state.onlyUnresolved;
+        funnel.setAttribute('aria-pressed', String(state.onlyUnresolved));
+        refresh();
+      });
+      funnel.append(treeGlyph('filter'));
+      funnel.title = 'Show only files with unresolved comments';
+      funnel.setAttribute('aria-label', funnel.title);
+      funnel.setAttribute('aria-pressed', String(state.onlyUnresolved));
+      controls.append(search, funnel);
+      sidebar.append(controls, tree);
     }
   }
 
@@ -154,12 +181,17 @@
   let dismissComposer = () => {};
   function identity(host, title) {
     const header = el('div', 'composer-header');
-    header.append(el('span', '', `${title} as `));
     const author = el('input');
     author.placeholder = 'Your name';
     author.setAttribute('aria-label', 'Your name');
     author.value = read('hunkboard:author') || '';
     author.required = true;
+    const avatar = el('span', 'avatar', avatarLetter(author.value));
+    avatar.setAttribute('aria-hidden', 'true');
+    author.addEventListener('input', () => {
+      avatar.textContent = avatarLetter(author.value);
+    });
+    header.append(avatar, el('strong', '', title), el('span', '', 'as'));
     if (author.value) {
       const name = el('strong', '', author.value);
       const change = button('Change name', () => {
@@ -167,6 +199,10 @@
         change.replaceWith(author);
         author.focus();
       }, 'link-button');
+      change.setAttribute('aria-label', 'Change name');
+      const glyph = el('span', 'change-name-glyph', '✎');
+      glyph.setAttribute('aria-hidden', 'true');
+      change.replaceChildren(el('span', 'change-name-label', 'Change name'), glyph);
       header.append(name, change);
     } else header.append(author);
     host.append(header);
@@ -192,11 +228,20 @@
       }
     });
   }
-  function composer(host, submit, title, action = 'Add comment', nameOnly = false) {
+  function commentRow(node, side) {
+    const layout = viewMode();
+    const row = el('div', `comment-row ${layout}`);
+    const { start, span } = commentColumns(layout, side);
+    node.style.gridColumn = `${start} / span ${span}`;
+    row.append(node);
+    return row;
+  }
+  function composer(host, submit, title, action = 'Comment', nameOnly = false, side) {
     hideTextComment();
-    textPreview = null;
+    textSelection = null;
     dismissComposer();
     const node = el('form', 'comment-form');
+    const row = commentRow(node, side);
     const getAuthor = identity(node, title);
     const body = el('textarea');
     body.placeholder = 'Leave a comment';
@@ -204,14 +249,20 @@
     body.required = true;
     body.autofocus = true;
     const cancel = () => {
-      node.remove();
+      row.remove();
       clearSelection();
       host.querySelector('button')?.focus();
     };
     const add = el('button', 'primary', action);
     add.type = 'submit';
-    if (!nameOnly) node.append(body);
-    node.append(add, button('Cancel', cancel));
+    if (!nameOnly) {
+      const box = el('div', 'composer-box');
+      box.append(body);
+      node.append(box);
+    }
+    const footer = el('div', 'composer-footer');
+    footer.append(button('Cancel', cancel), add);
+    node.append(footer);
     node.addEventListener('submit', (event) => {
       event.preventDefault();
       const author = getAuthor();
@@ -222,8 +273,9 @@
       persist();
     });
     editorKeys(node, () => node.requestSubmit(), cancel);
-    dismissComposer = () => node.remove();
-    host.after(node);
+    dismissComposer = () => row.remove();
+    const anchor = host.closest('.comment-row') ?? host;
+    anchor.after(row);
     if (nameOnly) node.querySelector('input')?.focus();
     else body.focus();
   }
@@ -261,17 +313,16 @@
       const avatar = el('span', 'avatar', avatarLetter(message.author));
       avatar.setAttribute('aria-hidden', 'true');
       header.append(avatar, el('strong', '', message.author), relativeTime(message.createdAt));
-      item.append(header, el('p', '', message.body));
-      content.append(item);
+      item.append(el('p', '', message.body));
+      content.append(header, item);
     }
     if (thread.resolution) {
       const { by, status, at, note } = thread.resolution;
       const system = el('div', 'resolution');
       const header = el('div', 'message-header');
       header.append(el('span', '', `⚙ ${by} · ${statuses[status]}`), relativeTime(at));
-      system.append(header);
       if (note) system.append(el('p', '', note));
-      content.append(system);
+      content.append(header, system);
     }
     const footer = el('div', 'thread-footer');
     const replyHost = el('div', 'reply-host');
@@ -286,13 +337,17 @@
         const form = el('form', 'comment-form reply-form');
         const getAuthor = identity(form, 'Replying');
         const body = el('textarea');
-        body.placeholder = 'Reply…';
+        body.placeholder = 'Leave a comment';
         body.setAttribute('aria-label', 'Reply');
         body.required = true;
         body.value = input.value;
         const send = el('button', 'primary', 'Reply');
         send.type = 'submit';
-        form.append(body, send, button('Cancel', collapseReply));
+        const actions = el('div', 'composer-footer');
+        actions.append(button('Cancel', collapseReply), send);
+        const box = el('div', 'composer-box');
+        box.append(body);
+        form.append(box, actions);
         form.addEventListener('submit', (event) => {
           event.preventDefault();
           const author = getAuthor();
@@ -324,7 +379,7 @@
       };
       const author = read('hunkboard:author')?.trim();
       if (!author) {
-        composer(card, update, action, action, true);
+        composer(card, update, action, action, true, thread.position.side);
         return;
       }
       update('', author);
@@ -334,7 +389,7 @@
     footer.append(replyHost, resolve);
     content.append(footer);
     card.append(content);
-    return card;
+    return commentRow(card, thread.position.side);
   }
   function sourceLines(file, side) {
     const text = state.diff.files?.[file.path]?.[side];
@@ -353,7 +408,7 @@
   function paintRow(row) {
     const selected = ['old', 'new'].map((side) => {
       const line = row.dataset[side];
-      const active = isSelected(textPreview || state.selection, row.dataset.path, side,
+      const active = isSelected(textSelection || state.selection, row.dataset.path, side,
         line === undefined ? null : Number(line));
       row.classList.toggle(`selected-${side}`, active);
       return active;
@@ -365,7 +420,7 @@
   }
   let textComment = null;
   let selectionTimer;
-  let textPreview = null;
+  let textSelection = null;
   function hideTextComment() {
     clearTimeout(selectionTimer);
     textComment?.remove();
@@ -373,8 +428,8 @@
   }
   function dismissTextSelection() {
     hideTextComment();
-    if (textPreview) {
-      textPreview = null;
+    if (textSelection) {
+      textSelection = null;
       paintSelection();
     }
   }
@@ -386,7 +441,7 @@
   function cellEntry(cell) {
     const row = cell.closest('.code-row');
     const side = row.classList.contains('split')
-      ? (cell === row.children[1] ? 'old' : 'new')
+      ? (cell === row.children[2] ? 'old' : 'new')
       : (row.dataset.new === undefined ? 'old' : 'new');
     return { path: row.dataset.path, side, line: Number(row.dataset[side]), row };
   }
@@ -433,12 +488,12 @@
       return;
     }
     const { selection, covered, snapshot, range } = selected;
-    textPreview = selection;
+    textSelection = selection;
     paintSelection();
     const activate = (event) => {
       if (event.type === 'pointerdown' && event.button !== 0) return;
       event.preventDefault();
-      textPreview = null;
+      textSelection = null;
       state.selection = selection;
       const file = state.files.find((item) => item.path === selection.path);
       openSelection(file, selection.side, covered.at(-1).row, snapshot);
@@ -500,7 +555,7 @@
   document.addEventListener('scroll', dismissTextSelection, true);
   function clearSelection() {
     hideTextComment();
-    textPreview = null;
+    textSelection = null;
     const previous = drag;
     drag = null;
     if (previous?.control.hasPointerCapture(previous.id)) {
@@ -519,7 +574,7 @@
   });
   function setSelection(event, file, side, number) {
     hideTextComment();
-    textPreview = null;
+    textSelection = null;
     const previous = state.selection;
     const anchor = event.shiftKey && previous?.path === file.path && previous.side === side
       ? previous.anchor : number;
@@ -537,13 +592,20 @@
     const codeSnapshot = selectedText ?? sourceLines(file, side)
       .slice(start - 1, end)
       .join('\n');
+    const prefix = side === 'new' ? 'R' : 'L';
+    const title = start === end
+      ? `Add a comment on line ${prefix}${start}`
+      : `Add a comment on lines ${prefix}${start} to ${prefix}${end}`;
     composer(
       host,
       (body, author) =>
         state.threads.push(
           createThread({ filePath: file.path, side, line: range, codeSnapshot, body, author })
         ),
-      `Commenting on ${side} ${start === end ? `line ${start}` : `lines ${start}–${end}`}`
+      title,
+      'Comment',
+      false,
+      side
     );
   }
   function syntax(node, content, path) {
@@ -641,7 +703,7 @@
       return add;
     };
     const gutter = (line, side, row) => {
-      const cell = el('span', 'gutter-cell');
+      const cell = el('span', `gutter-cell ${line?.type || 'empty'}`);
       const number = line?.[`${side}Line`];
       row.dataset.path = file.path;
       if (number != null) row.dataset[side] = number;
@@ -665,8 +727,10 @@
         const row = el('div', 'code-row split');
         row.append(
           gutter(left, 'old', row),
+          signCell(left),
           codeCell(left, file, wordMap.get(left)),
           gutter(right, 'new', row),
+          signCell(right),
           codeCell(right, file, wordMap.get(right))
         );
         paintRow(row);
@@ -680,7 +744,7 @@
         row.append(
           gutter(line, 'old', row),
           gutter(line, 'new', row),
-          el('span', 'sign', line.type === 'add' ? '+' : line.type === 'del' ? '−' : ' '),
+          signCell(line),
           codeCell(line, file, wordMap.get(line))
         );
         paintRow(row);
@@ -689,21 +753,84 @@
         attach(row, 'new', line.newLine);
       }
   }
+  function signCell(line) {
+    const sign = line?.type === 'add' ? '+' : line?.type === 'del' ? '−' : '';
+    const cell = el('span', `sign-cell ${line?.type || 'empty'}`, sign);
+    cell.setAttribute('aria-hidden', 'true');
+    return cell;
+  }
   function isReviewed(file) {
     return read(viewedKey(dataBase, file.path, fileContentHash(file))) === '1';
   }
   function viewedControl(file) {
     const viewed = isReviewed(file);
-    const tick = button('✓', () => {
+    const tick = el('label', 'viewed');
+    const checkbox = el('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = viewed;
+    checkbox.addEventListener('change', () => {
       write(viewedKey(dataBase, file.path, fileContentHash(file)), viewed ? '0' : '1');
       state.collapsed.set(file.path, !viewed);
       render();
-    }, 'viewed');
+    });
+    tick.append(checkbox, el('span', 'viewed-label', 'Viewed'));
     tick.setAttribute('aria-pressed', String(viewed));
     tick.setAttribute('aria-label', `Mark ${file.path} as ${viewed ? 'unviewed' : 'viewed'}`);
+    checkbox.setAttribute('aria-label', tick.getAttribute('aria-label'));
     return tick;
   }
 
+  async function copyPath(path) {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(path);
+    } catch {
+      const area = el('textarea', 'copy-fallback');
+      area.readOnly = true;
+      area.value = path;
+      area.setAttribute('aria-label', 'Copy file path');
+      root.querySelector('.copy-fallback')?.remove();
+      toolbar.after(area);
+      area.focus();
+      area.select();
+    }
+  }
+  function fileMenu(file) {
+    const host = el('div', 'file-overflow');
+    const menu = el('div', 'file-menu');
+    menu.hidden = true;
+    const more = button('···', () => {
+      menu.hidden = !menu.hidden;
+      more.setAttribute('aria-expanded', String(!menu.hidden));
+      if (!menu.hidden) menu.querySelector('button').focus();
+    });
+    more.setAttribute('aria-label', `More actions for ${file.path}`);
+    more.setAttribute('aria-expanded', 'false');
+    const close = () => {
+      menu.hidden = true;
+      more.setAttribute('aria-expanded', 'false');
+    };
+    menu.append(button('Copy path', () => {
+      close();
+      copyPath(file.path);
+    }), button('Mark all as viewed', () => {
+      for (const item of state.files) {
+        write(viewedKey(dataBase, item.path, fileContentHash(item)), '1');
+        state.collapsed.set(item.path, true);
+      }
+      render();
+    }));
+    host.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      close();
+      more.focus();
+    });
+    host.addEventListener('focusout', (event) => {
+      if (!host.contains(event.relatedTarget)) close();
+    });
+    host.append(more, menu);
+    return host;
+  }
   async function copyPrompt(event) {
     const target = event.currentTarget;
     const label = target.textContent;
@@ -730,20 +857,47 @@
   const progressRule = el('div', 'review-progress');
   const progressFill = el('div', 'review-progress-fill');
   progressRule.append(progressFill);
-  function statCell(node) {
-    const cell = el('span', 'tree-stat');
-    const stat = formatStat(node);
-    if (stat) {
-      cell.append(
-        el('span', 'add-count', stat.additions),
-        document.createTextNode(' '),
-        el('span', 'del-count', stat.deletions)
-      );
+  function treeGlyph(kind) {
+    const svgNode = (tag, attributes) => {
+      const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      for (const [name, value] of Object.entries(attributes)) node.setAttribute(name, value);
+      return node;
+    };
+    const svg = svgNode('svg', {
+      viewBox: '0 0 12 12',
+      width: '12',
+      height: '12',
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-width': '1',
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round',
+      'aria-hidden': 'true',
+      focusable: 'false',
+      class: `tree-${kind}`
+    });
+    if (kind === 'chevron') {
+      svg.append(svgNode('path', { d: 'M4.5 2.5 8 6 4.5 9.5' }));
+    } else if (kind === 'folder') {
+      svg.append(svgNode('path', { d: 'M1 10V2h4l1 2h5v6Z' }));
+    } else if (kind === 'search') {
+      svg.append(svgNode('circle', { cx: '5', cy: '5', r: '3' }));
+      svg.append(svgNode('path', { d: 'M7.5 7.5 11 11' }));
+    } else {
+      const shapes = {
+        document: 'M3 1h4l3 3v7H3ZM7 1v3h3',
+        filter: 'M1 2h10L7 6v4l-2 1V6Z',
+        copy: 'M4 4h7v7H4ZM8 2V1H1v7h1',
+        comment: 'M1 1h10v7H5l-3 3V8H1Z'
+      };
+      svg.append(svgNode('path', { d: shapes[kind] }));
     }
-    return cell;
+    return svg;
   }
   function renderFileTree(nav) {
-    const tree = buildFileTree(state.files);
+    const unresolved = openThreads(decorated());
+    const tree = buildFileTree(state.files.filter((file) =>
+      matchesFileFilter(file.path, state.fileFilter, state.onlyUnresolved, unresolved)));
     const indent = (row, depth) => {
       row.style.setProperty('--indent', `${Math.min(depth, 6) * 12}px`);
     };
@@ -752,8 +906,7 @@
     }, 'tree-root');
     rootRow.append(el('span', 'tree-name', state.diff.repo));
     rootRow.title = state.diff.repo;
-    rootRow.append(el('span', 'tree-count', String(state.files.length)));
-    rootRow.append(statCell(tree), el('span', 'tree-viewed'), el('span', 'status-mark'));
+    rootRow.append(el('span', 'tree-viewed'));
     if (!state.focus) rootRow.setAttribute('aria-current', 'page');
     nav.append(rootRow);
     const appendChildren = (host, node, depth) => {
@@ -762,11 +915,11 @@
         details.open = !state.treeClosed.has(directory.path);
         const summary = el('summary');
         indent(summary, depth);
-        summary.append(el('span', 'tree-name', directory.name));
-        summary.title = directory.path;
         summary.append(
-          statCell(directory), el('span', 'tree-viewed'), el('span', 'status-mark')
+          treeGlyph('chevron'), treeGlyph('folder'), el('span', 'tree-name', directory.name)
         );
+        summary.title = directory.path;
+        summary.append(el('span', 'tree-viewed'));
         const remember = (open) => {
           if (open) state.treeClosed.delete(directory.path);
           else state.treeClosed.add(directory.path);
@@ -797,10 +950,12 @@
         tick.setAttribute('aria-label', `Mark ${file.path} as viewed`);
         tick.title = viewed ? 'Mark as unviewed' : 'Mark as viewed';
         const mark = statusMark(file);
-        const status = el('span', `status-mark status-${mark.letter}`, mark.letter);
-        status.title = mark.label;
-        status.setAttribute('aria-label', mark.label);
-        linkRow.append(link, statCell(file), tick, status);
+        const status = el('span', 'status-mark');
+        status.append(treeGlyph('document'));
+        linkRow.title = `${file.path}: ${mark.label}`;
+        linkRow.setAttribute('aria-label', linkRow.title);
+        link.setAttribute('aria-label', linkRow.title);
+        linkRow.append(status, link, tick);
         host.append(linkRow);
       }
     };
@@ -821,6 +976,14 @@
     const base = (state.diff.baseCommit || state.diff.base).slice(0, 8);
     identity.append(metadata, el('div', 'revision',
       `${base} · ${formatRelativeTime(state.diff.generatedAt)}`));
+    const counts = totals(state.files);
+    const changeTotals = el('div', 'change-totals', `${counts.files} files · `);
+    changeTotals.append(
+      el('span', 'add-count', `+${counts.additions}`),
+      document.createTextNode(' '),
+      el('span', 'del-count', `-${counts.deletions}`)
+    );
+    identity.append(changeTotals);
     toolbar.append(identity);
     const progress = reviewProgress(state.files, isReviewed);
     const open = openThreads(all).length;
@@ -931,8 +1094,15 @@
       toggle.setAttribute('aria-label', `Toggle ${file.path}`);
       toggle.setAttribute('aria-expanded', String(!collapsed));
       const path = el('div', 'file-path');
-      path.append(el('strong', '',
+      const pathLine = el('div', 'file-path-line');
+      pathLine.append(el('strong', '',
         file.status === 'renamed' ? `${file.oldPath} → ${file.newPath}` : file.path));
+      const copy = button('', () => copyPath(file.path), 'copy-path');
+      copy.append(treeGlyph('copy'));
+      copy.setAttribute('aria-label', `Copy path ${file.path}`);
+      copy.title = 'Copy path';
+      pathLine.append(copy);
+      path.append(pathLine);
       const content = state.diff.files?.[file.path];
       const notes = [];
       if (file.isBinary || content?.binary) notes.push('Binary file');
@@ -941,13 +1111,25 @@
       if (modeLabel) notes.push(modeLabel);
       if (file.similarity !== undefined) notes.push(`${file.similarity}% similar`);
       if (notes.length) path.append(el('div', 'file-meta', notes.join(' · ')));
+      const meter = el('span', 'diffstat');
+      meter.setAttribute('aria-hidden', 'true');
+      for (const color of diffstatSquares(file.additions, file.deletions)) {
+        meter.append(el('span', `diffstat-square ${color}`));
+      }
       header.append(
         toggle,
         path,
         el('span', 'add-count', `+${file.additions}`),
         el('span', 'del-count', `−${file.deletions}`),
+        meter,
         viewedControl(file)
       );
+      const count = all.filter((thread) => thread.filePath === file.path).length;
+      const comments = el('span', 'file-comments');
+      comments.append(treeGlyph('comment'));
+      if (count) comments.append(document.createTextNode(String(count)));
+      comments.setAttribute('aria-label', `${count} comment threads`);
+      header.append(comments, fileMenu(file));
       section.append(header);
       main.append(section);
       const whole = state.focus ? fullFileLines(file, content) : null;
@@ -956,46 +1138,41 @@
       }
       if (collapsed) return;
       const code = el('div', 'diff-code');
-      section.append(code);
+      const clip = el('div', 'diff-clip');
+      clip.append(code);
+      section.append(clip);
       if (whole !== null) {
         addRows(code, file, whole, threads, placed);
       } else {
-        const gap = (newStart, end, oldStart) => {
-          if (
-            content?.truncated ||
-            typeof content?.new !== 'string' ||
-            typeof content?.old !== 'string' ||
-            end < newStart
-          )
-            return;
+        const gap = (newStart, end, oldStart, label = '') => {
+          const band = el('div', `hunk-row ${viewMode()}`);
+          const gutter = el('div', 'hunk-gutter');
           const key = `${file.path}:${newStart}:${end}`;
-          if (state.expanded.has(key))
+          const available = !content?.truncated && typeof content?.new === 'string' &&
+            typeof content?.old === 'string' && end >= newStart;
+          if (available && state.expanded.has(key)) {
             addRows(code, file, gapLines(content.new, newStart, end, oldStart), threads, placed);
-          else
-            code.append(
-              button(
-                `Expand ${end - newStart + 1} lines of context`,
-                () => {
-                  state.expanded.add(key);
-                  render();
-                },
-                'expand-context'
-              )
-            );
+          } else if (available) {
+            const expand = button('···', () => {
+              state.expanded.add(key);
+              render();
+            }, 'expand-context');
+            expand.setAttribute('aria-label', `Expand ${end - newStart + 1} lines of context`);
+            gutter.append(expand);
+          }
+          if (!label && !gutter.childElementCount) return;
+          band.append(gutter, el('div', 'hunk-header', label));
+          if (viewMode() === 'split') {
+            band.append(el('div', 'hunk-gutter'), el('div', 'hunk-header'));
+          }
+          code.append(band);
         };
         let oldEnd = 1,
           newEnd = 1;
         for (const hunk of file.hunks) {
-          gap(newEnd, hunk.newStart - 1, oldEnd);
-          code.append(
-            el(
-              'div',
-              'hunk-header',
-              `@@ -${hunk.oldStart},${hunk.oldLines} +${
-                hunk.newStart
-              },${hunk.newLines} @@${hunk.section ? ` ${hunk.section}` : ''}`
-            )
-          );
+          gap(newEnd, hunk.newStart - 1, oldEnd,
+            `@@ -${hunk.oldStart},${hunk.oldLines} +${hunk.newStart},${hunk.newLines} @@` +
+            (hunk.section ? ` ${hunk.section}` : ''));
           addRows(code, file, hunk.lines, threads, placed);
           oldEnd = hunk.oldStart + hunk.oldLines;
           newEnd = hunk.newStart + hunk.newLines;

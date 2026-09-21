@@ -46,4 +46,6 @@ upload() {
 }
 upload "$from/diff.json" "$ns/diff.json"
 [ ! -f "$from/resolutions.json" ] || upload "$from/resolutions.json" "$ns/resolutions.json"
-[ -z "$viewer" ] || upload "$viewer" "${root%/}/viewer.html"
+if [ -n "$viewer" ]; then
+  upload "$viewer" "${root%/}/viewer.html"
+fi
