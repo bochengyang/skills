@@ -577,6 +577,14 @@ main {
   background: var(--canvas);
 }
 
+.outdated-chip {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0 6px;
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+
 .thread-summary,.message-header,.composer-header {
   display: flex;
   align-items: center;

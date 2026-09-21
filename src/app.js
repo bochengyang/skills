@@ -286,14 +286,15 @@
     return time;
   }
   function threadCard(thread) {
-    const closed = ['resolved', 'wontfix'].includes(threadState(thread));
+    const outdated = freshness(thread) !== 'current';
+    const closed = outdated || ['resolved', 'wontfix'].includes(threadState(thread));
     const card = el('div', 'thread');
     card.dataset.threadId = thread.id;
     card.classList.toggle('closed', closed);
     const content = el('div', 'thread-content');
     const statuses = { resolved: 'Resolved', wontfix: "Won't fix", 'needs-info': 'Needs info' };
     if (closed) {
-      const label = thread.resolved
+      const label = outdated ? 'Code moved' : thread.resolved
         ? `${thread.resolved.by} resolved this conversation`
         : `${thread.resolution.by} marked this ${statuses[thread.resolution.status]}`;
       const summary = el('div', 'thread-summary');
@@ -304,6 +305,7 @@
       }, 'link-button');
       toggle.setAttribute('aria-expanded', 'false');
       content.hidden = true;
+      if (outdated) summary.append(el('span', 'outdated-chip', 'Outdated'));
       summary.append(el('span', '', `${label} · `), toggle);
       card.append(summary);
     }
@@ -393,7 +395,11 @@
   }
   function sourceLines(file, side) {
     const text = state.diff.files?.[file.path]?.[side];
-    if (typeof text === 'string') return text.split('\n');
+    if (typeof text === 'string') {
+      const lines = text.split('\n');
+      if (lines.at(-1) === '') lines.pop();
+      return lines;
+    }
     const map = [];
     file.hunks.forEach((h) =>
       h.lines.forEach((l) => {
@@ -402,6 +408,10 @@
       })
     );
     return map;
+  }
+  function freshness(thread) {
+    const file = state.files.find((file) => file.path === thread.filePath);
+    return threadFreshness(thread, file ? sourceLines(file, thread.position.side) : null);
   }
   const selectionControls = new WeakMap();
   let drag = null;
@@ -834,7 +844,7 @@
   async function copyPrompt(event) {
     const target = event.currentTarget;
     const label = target.textContent;
-    const text = formatPrompt(openThreads(decorated()));
+    const text = formatPrompt(openThreads(decorated()), { freshness });
     try {
       if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
       await navigator.clipboard.writeText(text);

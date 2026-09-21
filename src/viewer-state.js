@@ -41,6 +41,21 @@ export function threadsEndingAt(threads, path, side, line) {
     (t.position.line.end ?? t.position.line) === line
   );
 }
+export function threadFreshness(thread, lines) {
+  if (thread.codeSnapshot === undefined) return 'current';
+  if (lines === null) return 'missing';
+  const { line } = thread.position;
+  const start = line.start ?? line;
+  const end = line.end ?? line;
+  const range = [];
+  for (let n = start; n <= end; n++) {
+    if (lines[n - 1] === undefined) return 'missing';
+    range.push(lines[n - 1]);
+  }
+  const normalize = (text) => text.replace(/\r\n/g, '\n')
+    .split('\n').map((line) => line.replace(/\s+$/, '')).join('\n').replace(/\n$/, '');
+  return normalize(range.join('\n')) === normalize(thread.codeSnapshot) ? 'current' : 'outdated';
+}
 export function gapLines(text, start, end, oldStart) {
   const lines = text.split('\n');
   if (lines.at(-1) === '') lines.pop();

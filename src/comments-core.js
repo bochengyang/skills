@@ -72,15 +72,27 @@ export function openThreads(threads) {
   return threads.filter((thread) => ['open', 'needs-info'].includes(threadState(thread)));
 }
 
-export function formatPrompt(threads) {
-  return threads.map((thread) => {
+export function formatPrompt(threads, { freshness } = {}) {
+  const current = [], stale = [];
+  for (const thread of threads) {
+    const state = freshness?.(thread);
+    (state === 'outdated' || state === 'missing' ? stale : current).push(thread);
+  }
+  const block = (thread, outdated = false) => {
     const { side, line } = thread.position;
     const location = typeof line === 'object' ? `L${line.start}-L${line.end}` : `L${line}`;
     return [
-      `${thread.filePath}:${location} (${side}) [${thread.id}]`,
+      `${thread.filePath}${outdated ? '' : `:${location}`} (${side}) [${thread.id}]`,
       ...(thread.codeSnapshot === undefined
         ? [] : thread.codeSnapshot.split('\n').map((text) => `> ${text}`)),
       ...thread.messages.map((message) => `${message.author}: ${message.body}`),
     ].join('\n');
-  }).join('\n\n');
+  };
+  return [
+    ...current.map((thread) => block(thread)),
+    ...(stale.length ? [
+      '## Outdated — code moved; locate these by the quoted text because line numbers no longer apply',
+      ...stale.map((thread) => block(thread, true))
+    ] : [])
+  ].join('\n\n');
 }
