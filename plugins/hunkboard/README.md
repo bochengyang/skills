@@ -20,7 +20,7 @@ the tool itself (it needs `git` and `jq`).
 <summary><strong>Claude Code</strong></summary>
 
 ```
-/plugin marketplace add bochengyang/hunkboard
+/plugin marketplace add bochengyang/skills
 /plugin install hunkboard
 ```
 
@@ -30,7 +30,7 @@ the tool itself (it needs `git` and `jq`).
 <summary><strong>Codex, Gemini CLI, Cursor and other agents</strong></summary>
 
 ```
-npx skills@latest add bochengyang/hunkboard
+npx skills@latest add bochengyang/skills --skill hunkboard-publish --skill hunkboard-comments
 ```
 
 </details>

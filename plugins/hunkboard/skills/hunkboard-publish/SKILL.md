@@ -18,9 +18,9 @@ viewer page. Use the first of these that exists as `<bin>`:
 1. `$HUNKBOARD_BIN`, if set;
 2. the directory holding `hunkboard-publish` on `PATH`;
 3. `$CLAUDE_PLUGIN_ROOT/bin`, if set (the Claude Code plugin ships the scripts);
-4. otherwise fetch it yourself: `git clone --depth 1 https://github.com/bochengyang/hunkboard
+4. otherwise fetch it yourself: `git clone --depth 1 https://github.com/bochengyang/skills
    ~/.cache/hunkboard/tool` (or `git -C ~/.cache/hunkboard/tool pull` if it is already there),
-   and use `~/.cache/hunkboard/tool/bin`.
+   and use `~/.cache/hunkboard/tool/plugins/hunkboard/bin`.
 
 The viewer is `<bin>/../dist/viewer.html`; if it is missing, run `sh <bin>/build` (POSIX sh,
 no Node). The scripts need `git` and `jq`; if `jq` is missing, tell the user how to install it

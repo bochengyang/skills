@@ -1,21 +1,14 @@
 {
-  "name": "hunkboard",
-  "owner": {
-    "name": "Bocheng Yang"
-  },
-  "description": "Review what your coding agent changed the way you review a pull request, on your laptop or your phone, and send your comments straight back to it.",
+  "name": "bochengyang",
+  "owner": { "name": "Bocheng Yang" },
+  "description": "Plugins and skills for coding agents.",
   "plugins": [
     {
       "name": "hunkboard",
-      "source": "./",
+      "source": "./plugins/hunkboard",
       "description": "Review what your coding agent changed the way you review a pull request, on your laptop or your phone, and send your comments straight back to it.",
       "category": "development",
-      "keywords": [
-        "code-review",
-        "diff",
-        "pull-request",
-        "review"
-      ]
+      "keywords": ["code-review", "diff", "pull-request", "review"]
     }
   ]
 }
