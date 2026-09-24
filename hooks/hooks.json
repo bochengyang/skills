@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c '[ -n \"$HUNKBOARD_REMOTE\" ] || exit 0; cd \"$(git rev-parse --show-toplevel 2>/dev/null)\" || exit 0; branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null | tr / -); out=\"$HOME/.cache/hunkboard/$(basename \"$PWD\")/$branch\"; [ -f \"$out/diff.json\" ] || exit 0; \"${CLAUDE_PLUGIN_ROOT}/bin/hunkboard-publish\" --out \"$out\" >/dev/null && \"${CLAUDE_PLUGIN_ROOT}/bin/hunkboard-push\" --from \"$out\" >/dev/null 2>&1 || true'",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "hunkboard",
+  "version": "0.1.0",
+  "description": "Review what your coding agent changed the way you review a pull request, on your laptop or your phone, and send your comments straight back to it.",
+  "author": {
+    "name": "Bocheng Yang"
+  },
+  "license": "MIT",
+  "keywords": [
+    "code-review",
+    "diff",
+    "pull-request",
+    "review"
+  ],
+  "skills": [
+    "./skills/hunkboard-publish",
+    "./skills/hunkboard-comments"
+  ]
+}

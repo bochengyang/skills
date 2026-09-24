@@ -1,14 +1,68 @@
 # hunkboard
 
-Static, agent-neutral, PR-style diff review for a working tree that has not been committed yet.
+Review what your coding agent changed the way you review a pull request, on your laptop or
+your phone, and send your comments straight back to it.
 
-Your coding agent edits files. `hunkboard-publish` turns the working tree into one `diff.json`.
-You push that file to any static web server, open the shared `viewer.html` on a phone, tablet
-or laptop, read the changes GitHub-style (inline or side-by-side), and leave comments.
-The comments land in `comments.json` next to the diff. Your agent reads them, fixes the code,
-answers in `resolutions.json`, and publishes the next round.
+Your agent finishes a task. To see what it did, you open an editor and read raw diffs, or you
+ask it for a summary and trust it. hunkboard turns the branch into a GitHub-style review page
+instead: side by side or inline, syntax-coloured, with a file tree and a "viewed" tick per
+file. Comment on any line; the agent picks the comments up, fixes the code or answers, and
+shows you the next round.
 
-No database, no application server, no account. One directory per repo and branch.
+No database, no account, no service to run: one static page and three JSON files.
+
+## Installation (30-second setup)
+
+Install the skills into your agent. That is all: the first time the agent uses them, it fetches
+the tool itself (it needs `git` and `jq`).
+
+<details>
+<summary><strong>Claude Code</strong></summary>
+
+```
+/plugin marketplace add bochengyang/hunkboard
+/plugin install hunkboard
+```
+
+</details>
+
+<details>
+<summary><strong>Codex, Gemini CLI, Cursor and other agents</strong></summary>
+
+```
+npx skills@latest add bochengyang/hunkboard
+```
+
+</details>
+
+## Use it
+
+1. **Ask your agent to show you the changes** (`/hunkboard:hunkboard-publish` in Claude Code).
+   It opens the board and gives you a URL.
+2. **Review.** Tap a line number to comment; shift-tap a second one for a range.
+3. **Hand it back.** Tell the agent you are done. Without a server, press **Copy prompt** on
+   the board and paste the text; with one, the agent reads your comments from it. It works
+   through each thread, then shows you the new diff with its answers under your comments.
+
+The review survives the work moving on. The diff is measured from where the branch left
+`main`, like a pull request, so committing does not reset it. Each comment remembers the code
+it was written on; when that code changes, the thread is marked **Outdated** instead of
+pointing at whatever now sits on that line.
+
+## Review from anywhere
+
+Without a server, the board runs on your machine and comments come back as pasted text. To
+open it from your phone wherever you are and save comments from the page, put it on any static
+server that accepts `PUT` on `comments.json`: see the [nginx example](examples/nginx/hunkboard.conf)
+(authentication, compression and the write rule included). Then tell the skills where it is:
+
+```sh
+export HUNKBOARD_REMOTE=review-box                        # ssh host alias
+export HUNKBOARD_ROOT=/srv/hunkboard                      # directory on that host
+export HUNKBOARD_URL=https://review.example.com/hunkboard # public base, prefix included
+```
+
+The board contains your source code. Always put it behind authentication and TLS.
 
 ## How it works
 
@@ -32,42 +86,7 @@ Three files, each with exactly one writer:
 
 Schemas live in [`schema/`](schema/).
 
-## Requirements
-
-- Locally: `git`, `jq`, `ssh`/`scp` (or any way to copy a file). No Node or Python at runtime.
-- Remotely: any static file server. For in-page comment saving, the server must accept `PUT`
-  on `comments.json` (nginx: `dav_methods PUT`, see [`examples/nginx/`](examples/nginx/)).
-  Without PUT, the viewer still works: use **Copy prompt** and paste the text to your agent.
-- Node 20+ only to run the test-suite. `bin/build` (POSIX sh) assembles `dist/viewer.html` without Node.
-
-## Quick start
-
-```sh
-# 1. publish the branch: commits since main, plus uncommitted and untracked changes
-bin/hunkboard-publish --out /tmp/board/myrepo/feat-x
-# 2. deploy the viewer, then the namespace data, to a static server
-scp dist/viewer.html server:/srv/hunkboard/
-scp /tmp/board/myrepo/feat-x/diff.json server:/srv/hunkboard/myrepo/feat-x/
-# 3. open https://server/myrepo/feat-x/ on your phone
-#    (nginx maps that URL to /viewer.html; on a plain file server use
-#     https://server/viewer.html?ns=myrepo/feat-x instead)
-```
-
-A deploy copies one file, `viewer.html`. The interface face, Mona Sans VF, and code face,
-Monaspace Neon, both load from pinned jsDelivr CDNs: `github/mona-sans@v2.0.27` and
-`githubnext/monaspace@v1.400`. The viewer falls back to system fonts when they are unreachable. `hunkboard-push --viewer FILE` uploads just that viewer file.
-
-Try it locally without a server:
-
-```sh
-npm run build
-mkdir -p /tmp/board && cp dist/viewer.html /tmp/board/
-bin/hunkboard-publish --out /tmp/board/demo/main
-(cd /tmp/board && python3 -m http.server 8000)
-# open http://localhost:8000/viewer.html?ns=demo/main
-```
-
-## Command reference
+## Reference
 
 `bin/hunkboard-publish` — working tree → `diff.json`
 
@@ -97,38 +116,9 @@ Prints the absolute path of `diff.json`. Never touches the real index or working
 
 `bin/build` — assemble `dist/viewer.html` from `src/` and `vendor/` (POSIX sh, no dependencies).
 
-## Viewer
-
-Open `https://server/hunkboard/<repo>/<branch>/` (nginx example, any prefix works) or
-`viewer.html?ns=<repo>/<branch>` on a plain static server. The overview shows every file's hunks side by side (inline on phones), with
-word-level highlights, syntax colouring, expandable context and a per-file "viewed" state.
-The sidebar is a dense directory tree: collapsible folders, one line per file, and a status
-letter on the right (`M` modified, `A` added, `D` deleted, `R` renamed), the file's `+N −M`,
-and a tick for files you have marked as viewed. Directory rows carry the totals underneath
-them, and `Files` in the toolbar hides the sidebar when you want the full width for code. Pick a file to open it on its own as a whole-file diff, use
-Previous / Next to walk the changes, and click the root to return to the overview. Deep links
-carry the file in the URL hash (`#file=src%2Fapp.js`). Light and dark themes follow the
-system. Tap a line number to comment, shift-tap another to comment on a range. Comments are saved with a `PUT`; when the
-server refuses, they stay in the browser and **Copy prompt** hands them to your agent as text.
-
-## Agent integration
-
-The contract is the three JSON files. Any agent that can read and write files can take part:
-
-1. Read `comments.json`. A thread is open until the reviewer resolves it in the viewer
-   (`resolved` on the thread) or a resolution with status `resolved` or `wontfix` exists
-   for it in `resolutions.json`.
-2. Change the code.
-3. Append to `resolutions.json` (`resolved`, `wontfix` with a note, or `needs-info` to ask back).
-4. Re-run `hunkboard-publish` and push both files.
-
-`examples/claude-code/` shows a Stop hook that publishes after every agent turn and a
-slash command that drains open comments.
-
-## Security
-
-The board contains your source code. Always put it behind authentication and TLS, only allow
-`PUT` on `comments.json`, and never expose the publisher's machine.
+The viewer is one self-contained file. Its fonts, Mona Sans VF and Monaspace Neon, load from
+pinned jsDelivr CDNs (`github/mona-sans@v2.0.27`, `githubnext/monaspace@v1.400`) and fall back
+to system fonts when unreachable.
 
 ## Development
 
