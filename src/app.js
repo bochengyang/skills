@@ -1226,7 +1226,7 @@
   Promise.all([load('diff.json', true), load('comments.json'), load('resolutions.json')])
     .then(([diff, comments, resolutions]) => {
       state.diff = diff;
-      state.files = parseDiff(diff.rawDiff).files;
+      state.files = treeOrder(parseDiff(diff.rawDiff).files);
       state.resolutions = resolutions;
       state.threads = mergeThreads(comments?.threads, local);
       render();

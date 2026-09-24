@@ -176,6 +176,17 @@ export function buildFileTree(files) {
   return root;
 }
 
+export function treeOrder(files) {
+  const ordered = [];
+  const walk = (node) => {
+    for (const directory of node.dirs) walk(directory);
+    node.files.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
+    ordered.push(...node.files);
+  };
+  walk(buildFileTree(files));
+  return ordered;
+}
+
 export function fullFileLines(file, content) {
   if (!content || content.truncated || content.binary || file.isBinary) return null;
   if (file.oldPath === null || file.newPath === null) {
