@@ -1,3 +1,36 @@
+export function wordHighlights(parts) {
+  let old = 0, next = 0, common = 0;
+  for (const part of parts ?? []) {
+    const count = (part.value.match(/\w+|[^\w\s]/g) ?? []).length;
+    if (!part.added) old += count;
+    if (!part.removed) next += count;
+    if (!part.added && !part.removed) common += count;
+  }
+  if (old + next === 0 || 2 * common / (old + next) < 0.5) return null;
+  const segments = (exclude, changed) => {
+    const result = [];
+    for (const part of parts) {
+      if (part[exclude]) continue;
+      const segment = { text: part.value, changed: !!part[changed] };
+      const previous = result.at(-1);
+      if (previous && previous.changed === segment.changed) previous.text += segment.text;
+      else result.push(segment);
+    }
+    for (let i = 1; i < result.length - 1; i++) {
+      if (!result[i].changed && /^\s+$/.test(result[i].text) &&
+          result[i - 1].changed && result[i + 1].changed) result[i].changed = true;
+    }
+    const runs = [];
+    for (const segment of result) {
+      const previous = runs.at(-1);
+      if (previous && previous.changed === segment.changed) previous.text += segment.text;
+      else runs.push(segment);
+    }
+    return runs;
+  };
+  return { old: segments('added', 'removed'), new: segments('removed', 'added') };
+}
+
 export function commentColumns(layout, side) {
   if (layout === 'split') return { start: side === 'old' ? 1 : 4, span: 3 };
   return { start: 1, span: 4 };

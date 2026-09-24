@@ -633,9 +633,8 @@
     if (!line) return code;
     if (words) {
       for (const part of words) {
-        if ((line.type === 'del' && part.added) || (line.type === 'add' && part.removed)) continue;
-        const span = el('span', part.added || part.removed ? 'word-change' : '');
-        syntax(span, part.value, file.path);
+        const span = el('span', part.changed ? 'word-change' : '');
+        syntax(span, part.text, file.path);
         code.append(span);
       }
     } else syntax(code, line.content, file.path);
@@ -653,9 +652,11 @@
         right.content.length < 1000 &&
         window.Diff
       ) {
-        const words = window.Diff.diffWordsWithSpace(left.content, right.content);
-        wordMap.set(left, words);
-        wordMap.set(right, words);
+        const words = wordHighlights(window.Diff.diffWordsWithSpace(left.content, right.content));
+        if (words) {
+          wordMap.set(left, words.old);
+          wordMap.set(right, words.new);
+        }
       }
     const attach = (row, side, number) => {
       if (number == null) return;
