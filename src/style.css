@@ -434,8 +434,8 @@ main {
 
 .hb-code {
   display: block;
-  white-space: pre;
-  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   padding: 0 8px;
   min-height: 20px;
   color: var(--fg);
@@ -453,16 +453,19 @@ main {
 }
 
 .gutter-cell {
+  display: grid;
   background: var(--canvas);
   position: relative;
   min-width: 0;
-  height: 20px;
+  min-height: 20px;
 }
 
 .gutter-cell .gutter {
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
   width: 100%;
-  height: 20px;
+  min-height: 20px;
 }
 
 .add-comment {
