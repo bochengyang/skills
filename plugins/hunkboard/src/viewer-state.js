@@ -1,3 +1,8 @@
+export function headerIsStuck(sectionTop, headerTop, border) {
+  if (![sectionTop, headerTop, border].every(Number.isFinite)) return false;
+  return headerTop - (sectionTop + border) > 0.4;
+}
+
 export function wordHighlights(parts) {
   let old = 0, next = 0, common = 0;
   for (const part of parts ?? []) {

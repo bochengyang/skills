@@ -972,6 +972,26 @@
     };
     appendChildren(nav, tree, 1);
   }
+  let headerFrame = null;
+  function scheduleHeaderSync() {
+    if (headerFrame !== null) return;
+    headerFrame = requestAnimationFrame(() => {
+      headerFrame = null;
+      for (const section of root.querySelectorAll('section.file')) {
+        const header = section.querySelector('.file-header');
+        const stuck = headerIsStuck(
+          section.getBoundingClientRect().top,
+          header.getBoundingClientRect().top,
+          parseFloat(getComputedStyle(section).borderTopWidth)
+        );
+        if (header.classList.contains('stuck') !== stuck) {
+          header.classList.toggle('stuck', stuck);
+        }
+      }
+    });
+  }
+  window.addEventListener('scroll', scheduleHeaderSync, { passive: true });
+  window.addEventListener('resize', scheduleHeaderSync);
   function render() {
     dismissTextSelection();
     for (const child of [...root.children]) {
@@ -1239,6 +1259,7 @@
         main.append(el('p', '', t.filePath), threadCard(t));
       }
     }
+    scheduleHeaderSync();
   }
   async function load(name, required = false) {
     try {

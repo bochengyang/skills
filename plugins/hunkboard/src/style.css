@@ -370,6 +370,9 @@ main {
 }
 
 .file-header {
+  position: sticky;
+  top: 47px;
+  z-index: 3;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -377,6 +380,10 @@ main {
   background: var(--muted);
   border-bottom: 1px solid var(--border);
   border-radius: 6px 6px 0 0;
+}
+
+.file-header.stuck {
+  border-radius: 0;
 }
 
 .file-path {
@@ -910,7 +917,7 @@ button.primary {
   top: 44px;
   z-index: 5;
   height: 3px;
-  background: var(--border-muted);
+  background: linear-gradient(var(--border-muted), var(--border-muted)), var(--canvas);
 }
 
 .review-progress-fill {
