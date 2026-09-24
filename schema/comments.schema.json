@@ -13,26 +13,36 @@
   },
   "$defs": {
     "position": {
-      "type": "object",
-      "required": ["side", "line"],
-      "additionalProperties": false,
-      "properties": {
-        "side": { "enum": ["old", "new"], "description": "old = the deleted/left side, new = the added/right side." },
-        "line": {
-          "oneOf": [
-            { "type": "integer", "minimum": 1 },
-            {
-              "type": "object",
-              "required": ["start", "end"],
-              "additionalProperties": false,
-              "properties": {
-                "start": { "type": "integer", "minimum": 1 },
-                "end": { "type": "integer", "minimum": 1 }
-              }
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["side", "line"],
+          "additionalProperties": false,
+          "properties": {
+            "side": { "enum": ["old", "new"], "description": "old = the deleted/left side, new = the added/right side." },
+            "line": {
+              "oneOf": [
+                { "type": "integer", "minimum": 1 },
+                {
+                  "type": "object",
+                  "required": ["start", "end"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "start": { "type": "integer", "minimum": 1 },
+                    "end": { "type": "integer", "minimum": 1 }
+                  }
+                }
+              ]
             }
-          ]
+          }
+        },
+        {
+          "type": "object",
+          "required": ["scope"],
+          "additionalProperties": false,
+          "properties": { "scope": { "const": "file" } }
         }
-      }
+      ]
     },
     "message": {
       "type": "object",
@@ -47,6 +57,7 @@
       }
     },
     "thread": {
+      "description": "File-scoped threads have no line or codeSnapshot.",
       "type": "object",
       "required": ["id", "filePath", "position", "createdAt", "updatedAt", "messages"],
       "additionalProperties": false,

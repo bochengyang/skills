@@ -12,16 +12,20 @@ function commentMessage(body, author, now) {
 }
 
 export function createThread({
-  id = commentId(), filePath, side, line, body, author, codeSnapshot,
+  id = commentId(), filePath, scope, side, line, body, author, codeSnapshot,
   now = new Date().toISOString()
 }) {
-  if (side !== 'old' && side !== 'new') throw new Error('invalid side');
+  if (scope !== undefined && scope !== 'file') throw new Error('invalid scope');
+  if (scope === 'file' && (side !== undefined || line !== undefined || codeSnapshot !== undefined)) {
+    throw new Error('file comments cannot have side, line, or codeSnapshot');
+  }
+  if (scope !== 'file' && side !== 'old' && side !== 'new') throw new Error('invalid side');
   const positive = (n) => Number.isInteger(n) && n >= 1;
   const range = line && positive(line.start) && positive(line.end) && line.end >= line.start;
-  if (!(positive(line) || range)) throw new Error('invalid line');
+  if (scope !== 'file' && !(positive(line) || range)) throw new Error('invalid line');
   const thread = {
     id, filePath,
-    position: {
+    position: scope === 'file' ? { scope: 'file' } : {
       side, line: typeof line === 'object' ? { start: line.start, end: line.end } : line
     },
     createdAt: now, updatedAt: now, messages: [commentMessage(body, author, now)],
@@ -37,6 +41,7 @@ export function addReply(thread, { body, author, now = new Date().toISOString() 
 }
 
 export function threadAnchor(thread) {
+  if (thread.position.scope === 'file') return `${thread.filePath}:file`;
   const { side, line } = thread.position;
   return `${thread.filePath}:${side}:${line.start ?? line}`;
 }
@@ -79,11 +84,12 @@ export function formatPrompt(threads, { freshness } = {}) {
     (state === 'outdated' || state === 'missing' ? stale : current).push(thread);
   }
   const block = (thread, outdated = false) => {
-    const { side, line } = thread.position;
+    const { scope, side, line } = thread.position;
     const location = typeof line === 'object' ? `L${line.start}-L${line.end}` : `L${line}`;
     return [
-      `${thread.filePath}${outdated ? '' : `:${location}`} (${side}) [${thread.id}]`,
-      ...(thread.codeSnapshot === undefined
+      scope === 'file' ? `${thread.filePath} (file) [${thread.id}]`
+        : `${thread.filePath}${outdated ? '' : `:${location}`} (${side}) [${thread.id}]`,
+      ...(scope === 'file' || thread.codeSnapshot === undefined
         ? [] : thread.codeSnapshot.split('\n').map((text) => `> ${text}`)),
       ...thread.messages.map((message) => `${message.author}: ${message.body}`),
     ].join('\n');

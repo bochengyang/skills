@@ -381,7 +381,7 @@
       };
       const author = read('hunkboard:author')?.trim();
       if (!author) {
-        composer(card, update, action, action, true, thread.position.side);
+        composer(card, update, action, action, true, thread.position.scope === 'file' ? 'file' : thread.position.side);
         return;
       }
       update('', author);
@@ -391,7 +391,7 @@
     footer.append(replyHost, resolve);
     content.append(footer);
     card.append(content);
-    return commentRow(card, thread.position.side);
+    return commentRow(card, thread.position.scope === 'file' ? 'file' : thread.position.side);
   }
   function sourceLines(file, side) {
     const text = state.diff.files?.[file.path]?.[side];
@@ -411,7 +411,7 @@
   }
   function freshness(thread) {
     const file = state.files.find((file) => file.path === thread.filePath);
-    return threadFreshness(thread, file ? sourceLines(file, thread.position.side) : null);
+    return threadFreshness(thread, file ? sourceLines(file, thread.position.side ?? 'new') : null);
   }
   const selectionControls = new WeakMap();
   let drag = null;
@@ -1098,10 +1098,21 @@
       section.id = `file-${index}`;
       const header = el('div', 'file-header');
       const collapsed = state.collapsed.get(file.path) ?? (!state.focus && isReviewed(file));
-      const toggle = button(collapsed ? '▸' : '▾', () => {
+      const toggle = button('', () => {
         state.collapsed.set(file.path, !collapsed);
         render();
-      });
+      }, 'file-toggle');
+      const chevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      chevron.setAttribute('viewBox', '0 0 16 16');
+      chevron.setAttribute('width', '16');
+      chevron.setAttribute('height', '16');
+      chevron.setAttribute('aria-hidden', 'true');
+      const chevronPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      chevronPath.setAttribute('d', collapsed
+        ? 'M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z'
+        : 'M12.78 5.22a.749.749 0 0 1 0 1.06l-4.25 4.25a.749.749 0 0 1-1.06 0L3.22 6.28a.749.749 0 1 1 1.06-1.06L8 8.939l3.72-3.719a.749.749 0 0 1 1.06 0Z');
+      chevron.append(chevronPath);
+      toggle.append(chevron);
       toggle.setAttribute('aria-label', `Toggle ${file.path}`);
       toggle.setAttribute('aria-expanded', String(!collapsed));
       const path = el('div', 'file-path');
@@ -1136,13 +1147,29 @@
         viewedControl(file)
       );
       const count = all.filter((thread) => thread.filePath === file.path).length;
-      const comments = el('span', 'file-comments');
+      const comments = button('', () => {
+        if (collapsed) {
+          state.collapsed.set(file.path, false);
+          render();
+        }
+        clearSelection();
+        const host = document.getElementById(`file-${index}`).querySelector('.file-header');
+        composer(host, (body, author) => {
+          state.threads.push(createThread({ filePath: file.path, scope: 'file', body, author }));
+        }, 'Comment on this file', 'Comment', false, 'file');
+      }, 'file-comments');
       comments.append(treeGlyph('comment'));
       if (count) comments.append(document.createTextNode(String(count)));
-      comments.setAttribute('aria-label', `${count} comment threads`);
+      comments.setAttribute('aria-label', 'Comment on this file');
       header.append(comments, fileMenu(file));
       section.append(header);
       main.append(section);
+      if (!collapsed) {
+        for (const thread of fileThreads(threads, file.path)) {
+          section.append(threadCard(thread));
+          placed.add(thread.id);
+        }
+      }
       const whole = state.focus ? fullFileLines(file, content) : null;
       if (state.focus && whole === null) {
         section.append(el('p', 'file-notice', 'Whole-file view is not available for this file'));

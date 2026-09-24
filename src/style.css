@@ -27,6 +27,8 @@ Static%20Web%20Fonts/Monaspace%20Neon/MonaspaceNeon-Bold.woff2") format("woff2")
   --font-sans: /* Omit Noto Sans Backtick Fix: private GitHub subset, not published. */
     "Mona Sans VF", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica,
     Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono: "Monaspace Neon", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
   --canvas: #ffffff;
   --muted: #f6f8fa;
   --inset: #f6f8fa;
@@ -371,7 +373,7 @@ main {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
+  padding: 6px 8px;
   background: var(--muted);
   border-bottom: 1px solid var(--border);
   border-radius: 6px 6px 0 0;
@@ -385,7 +387,7 @@ main {
 }
 
 .file-path strong {
-  font-weight: 400;
+  font: 400 12px/18px var(--font-mono);
 }
 
 .file-header small {
@@ -427,8 +429,6 @@ main {
 }
 
 .hb-code,.hunk-header {
-  --font-mono: "Monaspace Neon", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
-    "Liberation Mono", monospace;
   font: 400 12px/20px var(--font-mono);
 }
 
@@ -971,6 +971,29 @@ button.primary {
 
 .file-meta {
   font-family: var(--font-sans);
+}
+
+.file-toggle {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-header>button.file-toggle {
+  min-height: 28px;
+  padding: 0;
+}
+
+.file-toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: var(--fg-muted);
 }
 
 .message p,.resolution p {

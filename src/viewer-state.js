@@ -32,6 +32,7 @@ export function wordHighlights(parts) {
 }
 
 export function commentColumns(layout, side) {
+  if (layout === 'split' && side === 'file') return { start: 1, span: 6 };
   if (layout === 'split') return { start: side === 'old' ? 1 : 4, span: 3 };
   return { start: 1, span: 4 };
 }
@@ -70,11 +71,15 @@ export function buildCommentsDocument(threads, now = new Date().toISOString()) {
 }
 export function threadsEndingAt(threads, path, side, line) {
   return threads.filter((t) =>
-    t.filePath === path && t.position.side === side &&
+    t.position.scope !== 'file' && t.filePath === path && t.position.side === side &&
     (t.position.line.end ?? t.position.line) === line
   );
 }
+export function fileThreads(threads, path) {
+  return threads.filter((t) => t.filePath === path && t.position.scope === 'file');
+}
 export function threadFreshness(thread, lines) {
+  if (thread.position.scope === 'file') return lines === null ? 'missing' : 'current';
   if (thread.codeSnapshot === undefined) return 'current';
   if (lines === null) return 'missing';
   const { line } = thread.position;
