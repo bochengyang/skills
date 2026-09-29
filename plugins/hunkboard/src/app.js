@@ -782,7 +782,7 @@
     checkbox.addEventListener('change', () => {
       write(viewedKey(dataBase, file.path, fileContentHash(file)), viewed ? '0' : '1');
       state.collapsed.set(file.path, !viewed);
-      render();
+      renderAfterToggle(file.path, !viewed);
     });
     tick.append(checkbox, el('span', 'viewed-label', 'Viewed'));
     tick.setAttribute('aria-pressed', String(viewed));
@@ -955,7 +955,7 @@
         const tick = button(viewed ? '✓' : '', () => {
           write(viewedKey(dataBase, file.path, fileContentHash(file)), viewed ? '0' : '1');
           state.collapsed.set(file.path, !viewed);
-          render();
+          renderAfterToggle(file.path, !viewed);
         }, 'tree-viewed');
         tick.setAttribute('aria-pressed', String(viewed));
         tick.setAttribute('aria-label', `Mark ${file.path} as viewed`);
@@ -992,6 +992,22 @@
   }
   window.addEventListener('scroll', scheduleHeaderSync, { passive: true });
   window.addEventListener('resize', scheduleHeaderSync);
+  function renderAfterToggle(toggled, folded) {
+    const stickyTop = progressRule.getBoundingClientRect().bottom;
+    const sections = [...root.querySelectorAll('section.file')].map((section) => {
+      const { top, bottom } = section.getBoundingClientRect();
+      return { path: section.dataset.path, top, bottom };
+    });
+    const anchor = readingAnchor(sections, stickyTop);
+    render();
+    const pageTops = Object.fromEntries([...root.querySelectorAll('section.file')].map((section) =>
+      [section.dataset.path, section.getBoundingClientRect().top + window.scrollY]));
+    const target = scrollAfterToggle({
+      anchor, toggled, folded, pageTops, order: sections.map((section) => section.path), stickyTop
+    });
+    if (target !== null) window.scrollTo(0, target);
+    scheduleHeaderSync();
+  }
   function render() {
     dismissTextSelection();
     for (const child of [...root.children]) {
@@ -1116,11 +1132,12 @@
       if (state.focus && state.focus !== file.path) return;
       const section = el('section', 'file');
       section.id = `file-${index}`;
+      section.dataset.path = file.path;
       const header = el('div', 'file-header');
       const collapsed = state.collapsed.get(file.path) ?? (!state.focus && isReviewed(file));
       const toggle = button('', () => {
         state.collapsed.set(file.path, !collapsed);
-        render();
+        renderAfterToggle(file.path, !collapsed);
       }, 'file-toggle');
       const chevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       chevron.setAttribute('viewBox', '0 0 16 16');

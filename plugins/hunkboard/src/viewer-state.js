@@ -3,6 +3,20 @@ export function headerIsStuck(sectionTop, headerTop, border) {
   return headerTop - (sectionTop + border) > 0.4;
 }
 
+export function readingAnchor(sections, stickyTop) {
+  const section = sections.find((section) => section.bottom > stickyTop);
+  return section ? { path: section.path, offset: section.top - stickyTop } : null;
+}
+
+export function scrollAfterToggle({ anchor, toggled, folded, pageTops, order, stickyTop }) {
+  if (!anchor || !Object.hasOwn(pageTops, anchor.path)) return null;
+  if (folded && anchor.path === toggled && anchor.offset < 0) {
+    const next = order[order.indexOf(toggled) + 1];
+    return Math.max(0, pageTops[next ?? toggled] - stickyTop);
+  }
+  return Math.max(0, pageTops[anchor.path] - stickyTop - anchor.offset);
+}
+
 export function wordHighlights(parts) {
   let old = 0, next = 0, common = 0;
   for (const part of parts ?? []) {
