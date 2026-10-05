@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "31bfb13e176cbf5c9bd9fb8942e464eac8ffba2e",
+  "include-component-in-tag": true,
+  "packages": {
+    "plugins/hunkboard": {
+      "release-type": "node",
+      "component": "hunkboard",
+      "versioning": "always-bump-patch",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": ".claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        }
+      ]
+    }
+  }
+}
