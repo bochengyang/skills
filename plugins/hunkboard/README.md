@@ -1,15 +1,22 @@
-# hunkboard
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../assets/hunkboard-logo-dark.png">
+    <img alt="hunkboard" src="../../assets/hunkboard-logo-light.png" height="64">
+  </picture>
+</h1>
 
-Review what your coding agent changed the way you review a pull request, on your laptop or
-your phone, and send your comments straight back to it.
+Review what your coding agent changed like a pull request, before you open one, on your laptop
+or your phone, and hand your comments back to it.
 
-Your agent finishes a task. To see what it did, you open an editor and read raw diffs, or you
-ask it for a summary and trust it. hunkboard turns the branch into a GitHub-style review page
+Your agent finishes a task. To see what it did, you open an editor and read raw diffs, push a
+draft pull request just to read it, or ask it for a summary and trust it. hunkboard turns the branch into a GitHub-style review page
 instead: side by side or inline, syntax-coloured, with a file tree and a "viewed" tick per
 file. Comment on any line; the agent picks the comments up, fixes the code or answers, and
 shows you the next round.
 
 No database, no account, no service to run: one static page and three JSON files.
+
+![hunkboard: comment on a line, hand the comments to the agent, review its next round](../../assets/hunkboard-demo.gif)
 
 ## Installation (30-second setup)
 

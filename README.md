@@ -5,7 +5,7 @@ Plugins and skills for coding agents. Each one lives in its own folder under
 
 | Plugin | What it does |
 |---|---|
-| [hunkboard](plugins/hunkboard/) | Review what your coding agent changed the way you review a pull request, on your laptop or your phone, and send your comments straight back to it. |
+| [hunkboard](plugins/hunkboard/) | Review what your coding agent changed like a pull request, before you open one, on your laptop or your phone, and hand your comments back to it. |
 
 ## Installation
 
