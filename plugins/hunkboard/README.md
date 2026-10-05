@@ -18,6 +18,9 @@ No database, no account, no service to run: one static page and three JSON files
 
 ![hunkboard: comment on a line, hand the comments to the agent, review its next round](../../assets/hunkboard-demo.gif)
 
+With a board server, comments save from any device and the agent's answers show under them:
+[watch the full 50-second demo](https://github.com/bochengyang/skills/releases/download/hunkboard-v0.1.0/hunkboard-demo.mp4) (MP4).
+
 ## Installation (30-second setup)
 
 Install the skills into your agent. That is all: the first time the agent uses them, it fetches
