@@ -806,7 +806,7 @@
       area.select();
     }
   }
-  function fileMenu(file) {
+  function fileMenu(file, canViewWholeFile) {
     const host = el('div', 'file-overflow');
     const menu = el('div', 'file-menu');
     menu.hidden = true;
@@ -821,6 +821,10 @@
       menu.hidden = true;
       more.setAttribute('aria-expanded', 'false');
     };
+    if (canViewWholeFile) menu.append(button('View whole file', () => {
+      close();
+      location.hash = focusTarget.toHash(file.path);
+    }));
     menu.append(button('Copy path', () => {
       close();
       copyPath(file.path);
@@ -1154,15 +1158,24 @@
       toggle.setAttribute('aria-expanded', String(!collapsed));
       const path = el('div', 'file-path');
       const pathLine = el('div', 'file-path-line');
-      pathLine.append(el('strong', '',
-        file.status === 'renamed' ? `${file.oldPath} → ${file.newPath}` : file.path));
+      const content = state.diff.files?.[file.path];
+      const canViewWholeFile = state.focus !== file.path && fullFileLines(file, content) !== null;
+      const pathLabel = file.status === 'renamed' ? `${file.oldPath} → ${file.newPath}` : file.path;
+      const pathText = el('strong');
+      if (canViewWholeFile) {
+        const link = el('a', '', pathLabel);
+        link.href = focusTarget.toHash(file.path);
+        pathText.append(link);
+      } else {
+        pathText.textContent = pathLabel;
+      }
+      pathLine.append(pathText);
       const copy = button('', () => copyPath(file.path), 'copy-path');
       copy.append(treeGlyph('copy'));
       copy.setAttribute('aria-label', `Copy path ${file.path}`);
       copy.title = 'Copy path';
       pathLine.append(copy);
       path.append(pathLine);
-      const content = state.diff.files?.[file.path];
       const notes = [];
       if (file.isBinary || content?.binary) notes.push('Binary file');
       if (content?.truncated) notes.push('Content omitted: size limit exceeded');
@@ -1198,7 +1211,7 @@
       comments.append(treeGlyph('comment'));
       if (count) comments.append(document.createTextNode(String(count)));
       comments.setAttribute('aria-label', 'Comment on this file');
-      header.append(comments, fileMenu(file));
+      header.append(comments, fileMenu(file, canViewWholeFile));
       section.append(header);
       main.append(section);
       if (!collapsed) {
