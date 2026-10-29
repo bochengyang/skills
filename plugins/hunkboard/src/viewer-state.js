@@ -342,3 +342,27 @@ export function matchesFileFilter(path, query, onlyUnresolved, threads) {
 export function treeIndent(depth) {
   return `${depth * 12}px`;
 }
+
+export function changeBlocks(lines) {
+  const blocks = [];
+  lines.forEach((line, index) => {
+    if (line.type !== 'add' && line.type !== 'del') return;
+    const previous = blocks.at(-1);
+    if (previous && previous.end === index - 1) {
+      previous.end = index;
+      if (previous.kind !== line.type) previous.kind = 'mixed';
+    } else blocks.push({ start: index, end: index, kind: line.type });
+  });
+  return blocks;
+}
+
+export function changeStep(blocks, from, direction) {
+  if (direction > 0) {
+    const index = blocks.findIndex((block) => block.start > from);
+    return index < 0 ? null : index;
+  }
+  for (let index = blocks.length - 1; index >= 0; index--) {
+    if (blocks[index].start < from) return index;
+  }
+  return null;
+}

@@ -1012,7 +1012,91 @@
     if (target !== null) window.scrollTo(0, target);
     scheduleHeaderSync();
   }
+  let changeNavigation = null;
+  let landedFile = null;
+  document.addEventListener('keydown', (event) => {
+    if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey ||
+        event.target.closest('input, textarea, select, [contenteditable]')) return;
+    if (changeNavigation && (event.key === 'n' || event.key === 'p')) {
+      event.preventDefault();
+      changeNavigation.step(event.key === 'n' ? 1 : -1);
+    }
+  });
+  window.addEventListener('scroll', () => changeNavigation?.sync(), { passive: true });
+  window.addEventListener('resize', () => {
+    changeNavigation?.positionRuler();
+    changeNavigation?.sync();
+  });
+  function addChangeNavigation(whole, code, clip, main) {
+    const blocks = changeBlocks(whole);
+    const rows = [...code.querySelectorAll('.code-row')];
+    const rowFor = (line) => rows.find((row) => line.type === 'del'
+      ? Number(row.dataset.old) === line.oldLine : Number(row.dataset.new) === line.newLine);
+    const targets = blocks.map((block) => rowFor(whole[block.start]));
+    const nav = el('div', 'change-nav');
+    const bar = main.querySelector('.focus-bar');
+    const header = main.querySelector('.file-header');
+    bar.classList.add('has-change-nav');
+    const top = () => {
+      const sticky = progressRule.getBoundingClientRect().bottom;
+      bar.style.top = `${sticky}px`;
+      header.style.top = `${sticky + bar.getBoundingClientRect().height}px`;
+      return sticky + bar.getBoundingClientRect().height + header.getBoundingClientRect().height;
+    };
+    const from = () => {
+      const edge = top();
+      const index = targets.findIndex((row) => row.getBoundingClientRect().top >= edge - 1);
+      if (index < 0) return whole.length;
+      const block = blocks[index];
+      return Math.abs(targets[index].getBoundingClientRect().top - edge) <= 1 ||
+        (window.scrollY === 0 && targets[index].getBoundingClientRect().bottom <= innerHeight)
+        ? block.start : block.start - 0.5;
+    };
+    const jump = (index) => {
+      if (index === null) return;
+      window.scrollTo(0, window.scrollY + targets[index].getBoundingClientRect().top - top());
+      sync();
+    };
+    const step = (direction) => jump(changeStep(blocks, from(), direction));
+    const previous = button('‹', () => step(-1));
+    const next = button('›', () => step(1));
+    previous.setAttribute('aria-label', 'Previous change');
+    next.setAttribute('aria-label', 'Next change');
+    const sync = () => {
+      previous.disabled = changeStep(blocks, from(), -1) === null;
+      next.disabled = changeStep(blocks, from(), 1) === null;
+    };
+    nav.append(previous, el('span', '', `${blocks.length} change${blocks.length === 1 ? '' : 's'}`), next);
+    bar.append(nav);
+    const ruler = el('div', 'change-ruler');
+    const positionRuler = () => {
+      ruler.style.left = `${clip.getBoundingClientRect().right - 10}px`;
+    };
+    blocks.forEach((block, index) => {
+      const mark = button('', () => jump(index), `change-ruler-mark ${block.kind}`);
+      mark.setAttribute('aria-label', `Go to change ${index + 1}`);
+      mark.style.top = `${block.start / whole.length * 100}%`;
+      mark.style.height = `${(block.end - block.start + 1) / whole.length * 100}%`;
+      ruler.append(mark);
+    });
+    clip.classList.add('has-change-ruler');
+    clip.append(ruler);
+    positionRuler();
+    changeNavigation = { step, sync, positionRuler };
+    requestAnimationFrame(() => {
+      if (!code.isConnected) return;
+      if (landedFile !== state.focus) {
+        landedFile = state.focus;
+        const edge = window.scrollY === 0 ? progressRule.getBoundingClientRect().bottom : top();
+        if (targets.length && (targets[0].getBoundingClientRect().top < edge ||
+            targets[0].getBoundingClientRect().bottom > innerHeight)) jump(0);
+      }
+      sync();
+    });
+  }
   function render() {
+    changeNavigation = null;
+    if (!state.focus) landedFile = null;
     dismissTextSelection();
     for (const child of [...root.children]) {
       if (child !== progressRule) child.remove();
@@ -1231,6 +1315,7 @@
       section.append(clip);
       if (whole !== null) {
         addRows(code, file, whole, threads, placed);
+        addChangeNavigation(whole, code, clip, main);
       } else {
         const gap = (newStart, end, oldStart, label = '') => {
           const band = el('div', `hunk-row ${viewMode()}`);
