@@ -1308,3 +1308,65 @@ button.primary {
   height: 100%;
   border-bottom: 0;
 }
+
+.change-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.diff-clip.has-change-ruler {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 10px;
+  overflow: visible;
+}
+
+.change-ruler {
+  position: fixed;
+  top: 100px;
+  width: 10px;
+  height: calc(100dvh - 120px);
+  background: var(--muted);
+}
+
+.change-ruler button.change-ruler-mark {
+  position: absolute;
+  left: 1px;
+  width: 8px;
+  min-height: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--success-fg);
+}
+
+.change-ruler-mark.del {
+  background: var(--danger-fg);
+}
+
+.change-ruler-mark.mixed {
+  background: var(--attention-fg);
+}
+
+@media (max-width: 767px) {
+  .diff-clip.has-change-ruler {
+    display: block;
+    overflow: hidden;
+  }
+
+  .change-ruler {
+    display: none;
+  }
+}
+
+.focus-bar.has-change-nav {
+  position: sticky;
+  z-index: 4;
+  gap: 4px 8px;
+  background: var(--canvas);
+}
+
+.focus-bar.has-change-nav button {
+  min-height: 24px;
+  padding: 2px 6px;
+}
