@@ -5,7 +5,6 @@
 
 ### Features
 
-* **viewer:** find the changes in the whole-file view ([60eba39](https://github.com/bochengyang/skills/commit/60eba39715405a402041ba1bc1c7a3078337249a))
 * **viewer:** find the changes in the whole-file view ([65a19c9](https://github.com/bochengyang/skills/commit/65a19c98846197540d7327cabb333c09b5e90a2f))
 
 
