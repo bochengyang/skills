@@ -338,3 +338,7 @@ export function matchesFileFilter(path, query, onlyUnresolved, threads) {
   return path.toLowerCase().includes(query.toLowerCase()) &&
     (!onlyUnresolved || threads.some((thread) => thread.filePath === path));
 }
+
+export function treeIndent(depth) {
+  return `${depth * 12}px`;
+}

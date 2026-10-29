@@ -914,7 +914,7 @@
     const tree = buildFileTree(state.files.filter((file) =>
       matchesFileFilter(file.path, state.fileFilter, state.onlyUnresolved, unresolved)));
     const indent = (row, depth) => {
-      row.style.setProperty('--indent', `${Math.min(depth, 6) * 12}px`);
+      row.style.setProperty('--indent', treeIndent(depth));
     };
     const rootRow = button('', () => {
       location.hash = '';
