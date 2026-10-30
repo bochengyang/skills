@@ -49,7 +49,9 @@ npx skills@latest add bochengyang/skills --skill hunkboard-publish --skill hunkb
 
 1. **Ask your agent to show you the changes** (`/hunkboard:hunkboard-publish` in Claude Code).
    It opens the board and gives you a URL.
-2. **Review.** Tap a line number to comment; shift-tap a second one for a range.
+2. **Review.** Tap a line number to comment; shift-tap a second one for a range. Open a file
+   to see it whole: the board lands on the first change, the ruler on the right marks every
+   change, and `n` / `p` (or the arrows above the file) step through them.
 3. **Hand it back.** Tell the agent you are done. Without a server, press **Copy prompt** on
    the board and paste the text; with one, the agent reads your comments from it. It works
    through each thread, then shows you the new diff with its answers under your comments.
