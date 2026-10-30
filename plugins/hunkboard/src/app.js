@@ -956,12 +956,13 @@
         if (state.focus === file.path) link.setAttribute('aria-current', 'page');
         const viewed = isReviewed(file);
         linkRow.classList.toggle('is-viewed', viewed);
-        const tick = button(viewed ? '✓' : '', () => {
+        const tick = button('', () => {
           write(viewedKey(dataBase, file.path, fileContentHash(file)), viewed ? '0' : '1');
           state.collapsed.set(file.path, !viewed);
           renderAfterToggle(file.path, !viewed);
         }, 'tree-viewed');
-        tick.setAttribute('aria-pressed', String(viewed));
+        tick.setAttribute('role', 'checkbox');
+        tick.setAttribute('aria-checked', String(viewed));
         tick.setAttribute('aria-label', `Mark ${file.path} as viewed`);
         tick.title = viewed ? 'Mark as unviewed' : 'Mark as viewed';
         const mark = statusMark(file);

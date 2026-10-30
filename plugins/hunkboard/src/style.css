@@ -339,6 +339,25 @@ a:hover {
   color: var(--fg-muted);
 }
 
+.sidebar button.tree-viewed {
+  display: grid;
+  place-items: center;
+  height: 24px;
+}
+
+.sidebar button.tree-viewed::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  font: 400 12px/12px var(--font-sans);
+}
+
+.sidebar button.tree-viewed[aria-checked=true]::before {
+  content: '✓';
+}
+
 .status-mark {
   display: flex;
   align-items: center;
