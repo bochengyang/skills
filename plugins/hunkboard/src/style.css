@@ -1105,7 +1105,7 @@ button.primary {
     top: 47px;
     bottom: 0;
     left: 0;
-    width: min(255px, 24vw);
+    width: min(320px, calc(100vw - 32px));
     max-height: none;
     z-index: 4;
     padding: 8px;
