@@ -358,6 +358,22 @@ a:hover {
   content: '✓';
 }
 
+.sidebar button.tree-viewed[aria-checked=mixed]::before {
+  content: '−';
+}
+
+.status-mark.status-A {
+  color: var(--success-fg);
+}
+
+.status-mark.status-D {
+  color: var(--danger-fg);
+}
+
+.status-mark.status-M,.status-mark.status-R {
+  color: var(--attention-fg);
+}
+
 .status-mark {
   display: flex;
   align-items: center;
@@ -1106,7 +1122,9 @@ button.primary {
     bottom: 0;
     left: 0;
     width: min(320px, calc(100vw - 32px));
-    max-height: none;
+    height: calc(100dvh - 47px);
+    max-height: calc(100dvh - 47px);
+    min-height: 0;
     z-index: 4;
     padding: 8px;
     background: var(--canvas);
