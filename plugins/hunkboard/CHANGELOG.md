@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.4](https://github.com/bochengyang/skills/compare/hunkboard-v0.1.3...hunkboard-v0.1.4) (2026-11-01)
+
+
+### Features
+
+* **viewer:** tick folders and show file status in the tree ([d95fa43](https://github.com/bochengyang/skills/commit/d95fa43ebcea122ced367b46b359d7eb40de8585))
+
+
+### Bug Fixes
+
+* **viewer:** keep the file tree's scroll position when ticking ([d95fa43](https://github.com/bochengyang/skills/commit/d95fa43ebcea122ced367b46b359d7eb40de8585))
+* **viewer:** keep the phone file tree drawer within the screen ([d95fa43](https://github.com/bochengyang/skills/commit/d95fa43ebcea122ced367b46b359d7eb40de8585))
+
 ## [0.1.3](https://github.com/bochengyang/skills/compare/hunkboard-v0.1.2...hunkboard-v0.1.3) (2026-10-30)
 
 
