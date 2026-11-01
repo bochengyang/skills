@@ -1013,6 +1013,7 @@
   window.addEventListener('scroll', scheduleHeaderSync, { passive: true });
   window.addEventListener('resize', scheduleHeaderSync);
   function renderAfterToggle(toggled, folded) {
+    const sidebarScroll = root.querySelector('.sidebar')?.scrollTop ?? 0;
     const stickyTop = progressRule.getBoundingClientRect().bottom;
     const sections = [...root.querySelectorAll('section.file')].map((section) => {
       const { top, bottom } = section.getBoundingClientRect();
@@ -1026,6 +1027,7 @@
       anchor, toggled, folded, pageTops, order: sections.map((section) => section.path), stickyTop
     });
     if (target !== null) window.scrollTo(0, target);
+    root.querySelector('.sidebar').scrollTop = sidebarScroll;
     scheduleHeaderSync();
   }
   let changeNavigation = null;
