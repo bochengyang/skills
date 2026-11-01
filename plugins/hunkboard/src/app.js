@@ -69,7 +69,11 @@
     state.focus = focus;
     if (focus) state.collapsed.set(focus, false);
     state.selection = null;
-    if (state.diff) render();
+    if (state.diff) {
+      const sidebarScroll = root.querySelector('.sidebar')?.scrollTop ?? 0;
+      render();
+      root.querySelector('.sidebar').scrollTop = sidebarScroll;
+    }
   });
   const viewMode = () => window.innerWidth < 768
     ? 'inline' : (state.focus ? state.focusMode : state.mode);
