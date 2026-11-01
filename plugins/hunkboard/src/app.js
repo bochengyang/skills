@@ -911,8 +911,9 @@
   }
   function renderFileTree(nav) {
     const unresolved = openThreads(decorated());
-    const tree = buildFileTree(state.files.filter((file) =>
-      matchesFileFilter(file.path, state.fileFilter, state.onlyUnresolved, unresolved)));
+    const shownFiles = state.files.filter((file) =>
+      matchesFileFilter(file.path, state.fileFilter, state.onlyUnresolved, unresolved));
+    const tree = buildFileTree(shownFiles);
     const indent = (row, depth) => {
       row.style.setProperty('--indent', treeIndent(depth));
     };
@@ -930,11 +931,26 @@
         details.open = !state.treeClosed.has(directory.path);
         const summary = el('summary');
         indent(summary, depth);
+        const files = shownFiles.filter((file) => file.path.startsWith(`${directory.path}/`));
+        const reviewed = files.filter(isReviewed).length;
+        const viewed = reviewed === files.length;
+        const tick = button('', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          for (const file of files) {
+            write(viewedKey(dataBase, file.path, fileContentHash(file)), viewed ? '0' : '1');
+            state.collapsed.set(file.path, !viewed);
+          }
+          renderAfterToggle(directory.path, !viewed);
+        }, 'tree-viewed');
+        tick.setAttribute('role', 'checkbox');
+        tick.setAttribute('aria-checked', viewed ? 'true' : reviewed ? 'mixed' : 'false');
+        tick.setAttribute('aria-label', `Mark ${directory.path} as viewed`);
+        tick.title = viewed ? 'Mark as unviewed' : 'Mark as viewed';
         summary.append(
-          treeGlyph('chevron'), treeGlyph('folder'), el('span', 'tree-name', directory.name)
+          tick, treeGlyph('chevron'), treeGlyph('folder'), el('span', 'tree-name', directory.name)
         );
         summary.title = directory.path;
-        summary.append(el('span', 'tree-viewed'));
         const remember = (open) => {
           if (open) state.treeClosed.delete(directory.path);
           else state.treeClosed.add(directory.path);
@@ -966,12 +982,11 @@
         tick.setAttribute('aria-label', `Mark ${file.path} as viewed`);
         tick.title = viewed ? 'Mark as unviewed' : 'Mark as viewed';
         const mark = statusMark(file);
-        const status = el('span', 'status-mark');
-        status.append(treeGlyph('document'));
+        const status = el('span', `status-mark status-${mark.letter}`, mark.letter);
         linkRow.title = `${file.path}: ${mark.label}`;
         linkRow.setAttribute('aria-label', linkRow.title);
         link.setAttribute('aria-label', linkRow.title);
-        linkRow.append(status, link, tick);
+        linkRow.append(tick, link, status);
         host.append(linkRow);
       }
     };

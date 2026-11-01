@@ -358,6 +358,22 @@ a:hover {
   content: '✓';
 }
 
+.sidebar button.tree-viewed[aria-checked=mixed]::before {
+  content: '−';
+}
+
+.status-mark.status-A {
+  color: var(--success-fg);
+}
+
+.status-mark.status-D {
+  color: var(--danger-fg);
+}
+
+.status-mark.status-M,.status-mark.status-R {
+  color: var(--attention-fg);
+}
+
 .status-mark {
   display: flex;
   align-items: center;
