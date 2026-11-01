@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/bochengyang/skills/compare/hunkboard-v0.1.4...hunkboard-v0.1.5) (2026-11-01)
+
+
+### Bug Fixes
+
+* **viewer:** keep the file tree's scroll position when opening a file ([1d4d0d7](https://github.com/bochengyang/skills/commit/1d4d0d7593e478223299efb12863ca962b84a098))
+
 ## [0.1.4](https://github.com/bochengyang/skills/compare/hunkboard-v0.1.3...hunkboard-v0.1.4) (2026-11-01)
 
 
